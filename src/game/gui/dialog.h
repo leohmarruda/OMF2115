@@ -10,6 +10,7 @@
 #ifndef DIALOG_H
 #define DIALOG_H
 
+#include "game/gui/component.h"
 #include "game/gui/gui_frame.h"
 
 /**
@@ -32,6 +33,7 @@ typedef enum dialog_result
     DIALOG_RESULT_NO      ///< No pressed
 } dialog_result;
 
+typedef struct component component;
 typedef struct dialog dialog;
 
 typedef void (*dialog_clicked_cb)(dialog *, dialog_result result); ///< Dialog button click callback
@@ -106,8 +108,7 @@ void dialog_render(dialog *dlg);
  * @brief Handle an action event
  * @param dlg Dialog to receive the action
  * @param action Action code to process
- * @param source CTRL_TYPE_* of the device that produced the action
  */
-void dialog_event(dialog *dlg, int action, int source);
+void dialog_event(dialog *dlg, int action);
 
 #endif // DIALOG_H

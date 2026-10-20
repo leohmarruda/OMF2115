@@ -1,0 +1,10 @@
+har,animation,name,basis,confidence
+1,23,Shadow Punch (QCB+P),wiki move list; pose catalog and traces agree,confirmed
+1,21,Shadow Slide (wiki lists QCB+K as Shadow Kick),script moves 80 px forward on input K41,likely
+1,16,Shadow Grab (D+D+P),input P252 matches the wiki command,likely
+1,20,Throw (close F+P),AF data: throw_duration 23; damage 45; successor animation 38,confirmed
+0,20,Throw (close F+P),AF data: throw_duration 21; damage 45; successor animation 38,confirmed
+1,42,Standing kick,source_standing_kick in main.c,confirmed
+1,43,Standing punch,source_standing_punch in main.c,confirmed
+0,41,Standing kick,source_standing_kick in main.c,confirmed
+0,42,Standing punch,source_standing_punch in main.c,confirmed

@@ -22,7 +22,11 @@ void maybe_install_har_hooks(scene *scene);
 uint32_t arena_state_hash(game_state *gs);
 void arena_state_dump(game_state *gs, char *buf, size_t bufsize);
 void arena_reset(scene *sc);
+void arena_restart(scene *sc);
 int arena_is_over(scene *sc);
+#ifdef OMF3K_SOURCE_TRACE
+void arena_take_omf3k_events(scene *sc, int *hit_mask, int *block_mask, int *round_winner);
+#endif
 int arena_get_wall_slam_tolerance(game_state *gs);
 
 #endif // ARENA_H

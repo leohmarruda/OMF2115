@@ -81,8 +81,8 @@ void print_rec_root_info(sd_rec_file *rec) {
         printf("\n");
 
         printf("## Unknown header data:\n");
-        printf("  - Score A:      %u\n", rec->scores[0]);
-        printf("  - Score B:      %u\n", rec->scores[1]);
+        printf("  - Score A:      %d\n", rec->scores[0]);
+        printf("  - Score B:      %d\n", rec->scores[1]);
         printf("  - Unknown A:    %d\n", rec->unknown_a);
         printf("  - Arena Pal.:   %d\n", rec->arena_palette);
         printf("  - Game Mode:    %s\n", game_mode_text[rec->game_mode]);
@@ -138,7 +138,7 @@ void print_rec_root_info(sd_rec_file *rec) {
                     } break;
                 }
             }
-            printf("%6u %10u %5u %6u %6d %22s", i, rec_move->tick, rec_move->lookup_id, rec_move->player_id, extra_len,
+            printf("%6u %10u %5u %6u %6u %22s", i, rec_move->tick, rec_move->lookup_id, rec_move->player_id, extra_len,
                    tmp);
 
             if(rec_move->lookup_id == 10 && extra_data[0] == REC_LOOKUP10_ASSERT_BYTE) {
@@ -163,7 +163,7 @@ void print_rec_root_info(sd_rec_file *rec) {
                 memcpy(&seed, extra_data + 4, sizeof(seed));
                 printf("Set random seed to 0x%08x", seed);
             } else if(rec_move->lookup_id == 10) {
-                printf("Unknown packet 10 subtype 0x%02x!!", (unsigned)extra_data[0]);
+                printf("Unknown packet 10 subtype 0x%02x!!", extra_data[0]);
             } else if(extra_len > 0) {
                 print_bytes(extra_data, extra_len, 8, 2);
             }
@@ -227,7 +227,7 @@ void rec_entry_get_key(sd_rec_file *rec, int entry_id, const char *key) {
     sd_rec_move *rec_move = vector_get(&rec->moves, entry_id);
     switch(rec_entry_key_get_id(key)) {
         case 0:
-            printf("%u", rec_move->tick);
+            printf("%d", rec_move->tick);
             break;
         case 1:
             printf("%d", rec_move->lookup_id);
@@ -256,6 +256,9 @@ int rec_key_get_id(const char *key) {
     if(strcmp(key, "rehit") == 0) {
         return 1;
     }
+    if(strcmp(key, "enhancement") == 0) {
+        return 2;
+    }
     return -1;
 }
 
@@ -279,6 +282,14 @@ void rec_set_key(sd_rec_file *rec, const char **key, int kcount, const char *val
         case 1:
             rec->rehit_mode = omf_strcasecmp(value, "on") == 0 ? 1 : 0;
             break;
+        case 2:
+            if(kcount != 3 || atoi(key[1]) < 0 || atoi(key[1]) > 1 ||
+               atoi(key[2]) < 0 || atoi(key[2]) > 10 || atoi(value) < 0 || atoi(value) > 3) {
+                printf("Use -k enhancement -k <pilot 0..1> -k <har 0..10> -s <0..3>.\n");
+                return;
+            }
+            rec->pilots[atoi(key[1])].info.enhancements[atoi(key[2])] = (char)atoi(value);
+            break;
         default:
             printf("Unknown key %s!\n", key[0]);
     }
@@ -299,7 +310,7 @@ void rec_get_key(sd_rec_file *rec, const char **key, int kcount) {
                 }
                 sd_rec_move *rec_move = vector_get(&rec->moves, r);
                 char *extra_data = sd_rec_get_extra_data(rec_move);
-                printf("Tick:       %u\n", rec_move->tick);
+                printf("Tick:       %d\n", rec_move->tick);
                 printf("Extra:      %d\n", rec_move->lookup_id);
                 printf("Player ID:  %d\n", rec_move->player_id);
                 if(rec_move->lookup_id < 3 && extra_data) {
@@ -320,6 +331,14 @@ void rec_get_key(sd_rec_file *rec, const char **key, int kcount) {
         } break;
         case 1:
             printf("Rehit mode:   %s\n", onoff[rec->rehit_mode]);
+            break;
+        case 2:
+            if(kcount != 3 || atoi(key[1]) < 0 || atoi(key[1]) > 1 ||
+               atoi(key[2]) < 0 || atoi(key[2]) > 10) {
+                printf("Use -k enhancement -k <pilot 0..1> -k <har 0..10>.\n");
+                return;
+            }
+            printf("Enhancement: %d\n", rec->pilots[atoi(key[1])].info.enhancements[atoi(key[2])]);
             break;
         default:
             printf("Unknown key %s!\n", key[0]);
@@ -579,7 +598,7 @@ int main(int argc, char *argv[]) {
         printf("\n");
 
         if(rec.pilots[i].info.photo) {
-            printf("  - Photo len  = %u\n", rec.pilots[i].info.photo->len);
+            printf("  - Photo len  = %d\n", rec.pilots[i].info.photo->len);
             printf("  - Photo size = (%d,%d)\n", rec.pilots[i].info.photo->width, rec.pilots[i].info.photo->height);
             printf("  - Photo pos  = (%d,%d)\n", rec.pilots[i].info.photo->pos.x, rec.pilots[i].info.photo->pos.y);
             printf("  - Missing    = %d\n", rec.pilots[i].info.photo->missing);

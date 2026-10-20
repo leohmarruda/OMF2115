@@ -20,8 +20,7 @@ typedef struct portrait {
 static void portrait_render(component *c) {
     portrait *g = widget_get_obj(c);
     if(g->img != NULL) {
-        const vec2i pos = component_get_pos(c);
-        video_draw(g->img->data, pos.x, pos.y);
+        video_draw(g->img->data, c->x, c->y);
     }
 }
 
@@ -125,7 +124,9 @@ void portrait_set_from_sprite(component *c, sd_sprite *spr) {
 
 component *portrait_create(int pilot_id) {
     component *c = widget_create();
-    component_set_supported(c, false, false, false);
+    c->supports_disable = 0;
+    c->supports_select = 0;
+    c->supports_focus = 0;
 
     // Local information
     portrait *local = omf_calloc(1, sizeof(portrait));

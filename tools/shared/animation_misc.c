@@ -142,7 +142,7 @@ void sprite_info(sd_sprite *s, int anim, int sprite) {
     printf(" * H:        %d\n", s->height);
     printf(" * Index:    %d\n", s->index);
     printf(" * Missing:  %d\n", s->missing);
-    printf(" * Length:   %u\n", s->len);
+    printf(" * Length:   %d\n", s->len);
 }
 
 void anim_common_info(sd_animation *ani) {
@@ -207,20 +207,20 @@ void anim_pop(sd_animation *ani) {
 }
 
 void string_strip(str *input, const char *tag) {
-    script s;
-    script_create(&s);
-    script_decode_str(&s, input, NULL);
+    sd_script s;
+    sd_script_create(&s);
+    sd_script_decode_str(&s, input, NULL);
 
-    for(int i = 0; i < script_get_frame_count(&s); i++) {
-        script_delete_tag(&s, i, tag);
+    for(unsigned i = 0; i < vector_size(&s.frames); i++) {
+        sd_script_delete_tag(&s, i, tag);
     }
 
     str dst;
     str_create(&dst);
-    script_encode(&s, &dst);
+    sd_script_encode(&s, &dst);
     str_set(input, &dst);
     str_free(&dst);
-    script_free(&s);
+    sd_script_free(&s);
 }
 
 void anim_strip_key(sd_animation *ani, int kn, const char **key, int kcount, const char *tag) {

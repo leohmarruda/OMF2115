@@ -10,6 +10,7 @@ typedef struct engine_init_flags {
     unsigned int net_mode;
     unsigned int record;
     unsigned int playback;
+    unsigned int omf3k_live;
     char force_renderer[16];
     char force_audio_backend[16];
     path rec_file;

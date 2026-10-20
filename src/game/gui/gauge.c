@@ -81,14 +81,13 @@ static void gauge_render(component *c) {
     gauge *g = widget_get_obj(c);
 
     int k = 0;
-    const vec2i pos = component_get_pos(c);
-    int x = pos.x;
+    int x = c->x;
     for(; k < g->lit; k++) {
-        video_draw(&g->on, x, pos.y);
+        video_draw(&g->on, x, c->y);
         x += g->on.w;
     }
     for(; k < g->size; k++) {
-        video_draw(&g->off, x, pos.y);
+        video_draw(&g->off, x, c->y);
         x += g->on.w;
     }
 }
@@ -102,7 +101,9 @@ static void gauge_free(component *c) {
 
 void gauge_set_lit(component *c, int lit) {
     gauge *g = widget_get_obj(c);
-    g->lit = lit;
+    if(lit != g->lit) {
+        g->lit = lit;
+    }
 }
 
 int gauge_get_lit(component *c) {
@@ -127,7 +128,9 @@ void gauge_set_size(component *c, int size) {
 
 component *gauge_create(gauge_type type, int size, int lit) {
     component *c = widget_create();
-    component_set_supported(c, false, false, false);
+    c->supports_disable = 0;
+    c->supports_select = 0;
+    c->supports_focus = 0;
 
     // Local information
     gauge *local = omf_calloc(1, sizeof(gauge));

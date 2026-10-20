@@ -106,10 +106,11 @@ void menu_listen_tick(component *c) {
 }
 
 void menu_listen_cancel(component *c, void *userdata) {
-    menu_finish(component_get_parent(c));
+    menu *m = sizer_get_obj(c->parent);
+    m->finished = 1;
 
     // Clean up host
-    listen_menu_data *local = menu_get_userdata(component_get_parent(c));
+    listen_menu_data *local = menu_get_userdata(c->parent);
     if(local->host && !local->controllers_created) {
         enet_host_destroy(local->host);
     }

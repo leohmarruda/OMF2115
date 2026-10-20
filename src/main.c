@@ -78,12 +78,13 @@ int main(int argc, char *argv[]) {
     struct arg_int *port = arg_int0("p", "port", "<port>", "Port to connect or listen (default: 2097)");
     struct arg_file *play = arg_file0("P", "play", "<file>", "Play an existing recfile");
     struct arg_file *rec = arg_file0("R", "rec", "<file>", "Record a new recfile");
+    struct arg_lit *omf3k_live = arg_lit0(NULL, "omf3k-live", "Start the OMF3K Jaguar versus Shadow live experiment");
     struct arg_lit *warp = arg_lit0(NULL, "warp", "run the game at warp speed");
     struct arg_int *speed = arg_int0(NULL, "speed", "<speed>", "game speed to use: 1-10");
     struct arg_str *log_level = arg_str0(NULL, "log-level", "<level>", "Log level (DEBUG, INFO, WARN, ERROR)");
     struct arg_end *end = arg_end(30);
     void *argtable[] = {help,  vers, listen, lobby, lobbyarg, connect, force_audio_backend, force_renderer,
-                        trace, port, play,   rec,   warp,     speed,   log_level,           end};
+                        trace, port, play,   rec,   omf3k_live, warp, speed, log_level, end};
     const char *progname = "openomf";
 
     // Make sure everything got allocated
@@ -123,6 +124,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Check other flags
+    if(omf3k_live->count > 0) {
+        init_flags.omf3k_live = 1;
+    }
     if(connect->count > 0) {
         init_flags.net_mode = NET_MODE_CLIENT;
         connect_port = 2097;
@@ -229,7 +233,7 @@ int main(int argc, char *argv[]) {
         ip = NULL;
     }
     if(lobbyaddr) {
-        log_debug("Lobby address overridden to %s", lobbyaddr);
+        log_debug("Lobby address overridden to %s", lobby);
         oldlobbyaddr = settings_get()->net.net_lobby_address;
         settings_get()->net.net_lobby_address = lobbyaddr;
     }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "game/gui/label.h"
+#include "game/gui/sizer.h"
 #include "game/gui/spritebutton.h"
 #include "game/gui/trn_menu.h"
 #include "game/scenes/mechlab.h"
@@ -97,7 +98,7 @@ void lab_menu_training_check_endurance_price(component *c, void *userdata) {
 }
 
 void lab_menu_training_done(component *c, void *userdata) {
-    trnmenu_finish(component_get_parent(c));
+    trnmenu_finish(c->parent);
 }
 
 // clang-format off

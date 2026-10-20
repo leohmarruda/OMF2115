@@ -87,6 +87,7 @@ void object_create(object *obj, game_state *gs, vec2i pos, vec2f vel) {
 int object_clone(object *src, object *dst, game_state *gs) {
     memcpy(dst, src, sizeof(object));
     dst->gs = gs;
+    player_clone(src, dst);
 
     if(src->cur_animation_own == OWNER_OBJECT) {
         dst->cur_animation = omf_calloc(1, sizeof(animation));
@@ -111,6 +112,10 @@ void object_set_stride(object *obj, int stride) {
         stride = 1;
     }
     obj->stride = stride;
+}
+
+void object_set_delay(object *obj, int delay) {
+    player_set_delay(obj, delay);
 }
 
 void object_set_playback_direction(object *obj, int dir) {
@@ -191,7 +196,7 @@ void object_palette_copy_transform(damage_tracker *damage, vga_palette *pal, voi
     damage_add_range(damage, src_end, pos);
 }
 
-void object_dynamic_tick_advance(object *obj) {
+void object_dynamic_tick(object *obj) {
     obj->age++;
 
     if(obj->attached_to_id != 0) {
@@ -206,12 +211,6 @@ void object_dynamic_tick_advance(object *obj) {
         obj->halt = (obj->halt_ticks > 0);
     }
 
-    if(obj->cur_animation != NULL && obj->halt == 0) {
-        player_run_advance(obj);
-    }
-}
-
-void object_dynamic_tick_apply(object *obj) {
     // Tick object implementation
     if(obj->dynamic_tick != NULL) {
         obj->dynamic_tick(obj);
@@ -227,32 +226,12 @@ void object_dynamic_tick_apply(object *obj) {
         obj->sprite_state.screen_shake_horizontal = 0;
     }
 
-    if(obj->cur_animation == NULL) {
-        return;
-    }
-
-    // Objects created after the advance pass need their frame 0 on the same tick, matching the
-    // original (a freshly-set HAR frame renders on the same tick). Spawns are the exception:
-    // they skip string tick 0 and first render on T+1, so they must not be bootstrapped here.
-    if(obj->animation_state.phase == ANIM_PHASE_HOLD && obj->halt == 0 && !obj->animation_state.from_spawn) {
-        player_run_advance(obj);
-    }
-
-    // Apply frame effects LAST, so that we have operated what we want on the current tick.
-    if(obj->animation_state.pending_apply) {
-        player_run_apply(obj);
-        for(int i = 1; i < obj->stride; i++) {
-            player_run_advance(obj);
-            if(obj->animation_state.pending_apply) {
-                player_run_apply(obj);
-            }
+    // Run animation player LAST, so that we have operated what we want on the current tick.
+    if(obj->cur_animation != NULL && obj->halt == 0) {
+        for(int i = 0; i < obj->stride; i++) {
+            player_run(obj);
         }
     }
-}
-
-void object_dynamic_tick(object *obj) {
-    object_dynamic_tick_advance(obj);
-    object_dynamic_tick_apply(obj);
 }
 
 void object_static_tick(object *obj) {
@@ -314,25 +293,24 @@ void object_del_frame_effects(object *obj, uint32_t effects) {
     obj->frame_video_effects &= ~effects;
 }
 
-// Assuming pre-flipped input
 void object_apply_controllable_velocity(object *obj, bool is_projectile, char input) {
-    if(player_frame_isset(obj, TAG_CX)) {
-        float cx = player_frame_get(obj, TAG_CX) / 10.0;
+    if(player_frame_isset(obj, "cx")) {
+        float cx = player_frame_get(obj, "cx") / 10.0;
         if(!is_projectile) {
             cx *= obj->horizontal_velocity_modifier;
         }
         if(input == '4') {
-            obj->cvel.x -= cx;
+            obj->cvel.x -= cx * object_get_direction(obj);
         } else if(input == '6') {
-            obj->cvel.x += cx;
+            obj->cvel.x += cx * object_get_direction(obj);
         } else if(input == '3' || input == '9') {
-            obj->cvel.x += cx * 0.7;
+            obj->cvel.x += cx * 0.7 * object_get_direction(obj);
         } else if(input == '1' || input == '7') {
-            obj->cvel.x -= cx * 0.7;
+            obj->cvel.x -= cx * 0.7 * object_get_direction(obj);
         }
         // CY needs CX to be set, and only works for projectiles
-        if(player_frame_isset(obj, TAG_CY) && is_projectile) {
-            float cy = player_frame_get(obj, TAG_CY) / 10.0;
+        if(player_frame_isset(obj, "cy") && is_projectile) {
+            float cy = player_frame_get(obj, "cy") / 10.0;
             if(input == '8') {
                 obj->cvel.y -= cy;
             } else if(input == '2') {
@@ -523,6 +501,7 @@ void object_free(object *obj) {
     if(obj->free != NULL) {
         obj->free(obj);
     }
+    player_free(obj);
     if(obj->cur_animation_own == OWNER_OBJECT) {
         animation_free(obj->cur_animation);
         omf_free(obj->cur_animation);
@@ -535,6 +514,7 @@ int object_clone_free(object *obj) {
     if(obj->clone_free != NULL) {
         obj->clone_free(obj);
     }
+    player_free(obj);
     if(obj->cur_animation_own == OWNER_OBJECT) {
         animation_free(obj->cur_animation);
         omf_free(obj->cur_animation);
@@ -727,21 +707,15 @@ int object_get_halt(const object *obj) {
 void object_set_repeat(object *obj, int repeat) {
     player_set_repeat(obj, repeat);
 }
-
 int object_get_repeat(const object *obj) {
     return player_get_repeat(obj);
 }
-
-int object_is_finished(object *obj) {
-    return obj->animation_state.phase == ANIM_PHASE_FINISHED;
+int object_finished(object *obj) {
+    return obj->animation_state.finished;
 }
 
-void object_set_finished(object *obj, bool finished) {
-    if(finished) {
-        obj->animation_state.phase = ANIM_PHASE_FINISHED;
-    } else if(obj->animation_state.phase == ANIM_PHASE_FINISHED) {
-        obj->animation_state.phase = ANIM_PHASE_RUNNING;
-    }
+void object_set_finished(object *obj) {
+    obj->animation_state.finished = 1;
 }
 
 void object_set_direction(object *obj, int dir) {
@@ -839,7 +813,7 @@ void object_set_disable_cb(object *obj, object_state_disable_cb cbf, void *userd
 }
 
 int object_is_airborne(const object *obj) {
-    return obj->pos.y < ARENA_FLOOR || obj->vel.y < 0 || player_frame_isset(obj, TAG_UG);
+    return obj->pos.y < ARENA_FLOOR || obj->vel.y < 0 || player_frame_isset(obj, "ug");
 }
 
 /* Attaches one object to another. Positions are synced to this from the attached. */

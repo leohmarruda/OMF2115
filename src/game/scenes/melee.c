@@ -633,9 +633,6 @@ void melee_input_tick(scene *scene) {
                 restore_cursors_to(local, local->pilot_id_a, local->pilot_id_b);
                 local->page = PILOT_SELECT;
                 load_pilot_portraits_palette(scene);
-            } else if(scene->gs->net_mode == NET_MODE_LOBBY) {
-                // came from the network lobby (challenge arena); go back there
-                game_state_set_next(scene->gs, SCENE_LOBBY);
             } else {
                 game_state_set_next(scene->gs, SCENE_MENU);
             }
@@ -856,7 +853,7 @@ static void load_hars(scene *scene, melee_local *local, bool player2_is_selectab
     }
 }
 
-bool melee_event_cb(scene *scene, SDL_Event *e) {
+int melee_event_cb(scene *scene, SDL_Event *e) {
     melee_local *local = scene_get_userdata(scene);
     if(local->page == HAR_SELECT && e->type == SDL_KEYDOWN && SDLK_1 <= e->key.keysym.sym &&
        e->key.keysym.sym <= SDLK_6) {
@@ -875,9 +872,8 @@ bool melee_event_cb(scene *scene, SDL_Event *e) {
             sd_pilot_set_player_color(player->pilot, pal_id, color);
             palette_load_player_colors(&player->pilot->palette, player_id);
         }
-        return true;
     }
-    return false;
+    return 1;
 }
 
 int melee_create(scene *scene) {

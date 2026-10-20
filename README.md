@@ -34,12 +34,6 @@ Installation
 1. Download the latest windows package from https://github.com/omf2097/openomf/releases
 2. Extract the zip file somewhere
 
-### macOS
-
-1. Download the latest `macos14_arm` package from https://github.com/omf2097/openomf/releases
-2. Extract `OpenOMF.app` and try to open it
-3. If macOS blocks the app, open **System Settings > Privacy & Security**, scroll to the Security section, and click **Open Anyway**
-
 Build
 -----
 For compiling from sources, please see [BUILD.md](BUILD.md).
@@ -64,3 +58,13 @@ For guidelines on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 Contact
 -------
 Discord: https://discord.gg/7CPPzab
+
+OMF3K
+-----
+
+OMF3K is the planned 3D adaptation of One Must Fall 2097. This checkout
+keeps its OMF3K work together in [omf3k](omf3k/README.md): project plans,
+the Jaguar and Shadow modeling references, and an experimental side-on
+[3D prototype](omf3k/prototype/README.md) driven by OpenOMF combat. The
+[development plan](omf3k/docs/OMF2097_DEVPLAN.md) tracks the next build and
+validation gates.

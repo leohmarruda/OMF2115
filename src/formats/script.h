@@ -11,40 +11,39 @@
 #ifndef SD_SCRIPT_H
 #define SD_SCRIPT_H
 
-#include "formats/script_tag.h"
 #include "utils/str.h"
 #include "utils/vector.h"
 #include <stdint.h>
 
 /** @brief Animation tag
  *
- * Describes a single tag in animation frame. Tags not in the known tag list are kept as TAG_INVALID
- * so that strings can be round-tripped, with their original character stored in the value field.
+ * Describes a single tag in animation frame.
  */
-typedef struct script_frame_tag {
-    uint8_t key;       ///< Tag identifier (see script_tag)
-    uint8_t has_param; ///< Tells if the tag has a parameter.
-    int16_t value;     ///< Tag parameter value if has_param is set.
-} script_frame_tag;
+typedef struct sd_script_tag {
+    const char *key;  ///< Tag name
+    const char *desc; ///< Tag description
+    int has_param;    ///< Tells if the tag has a parameter
+    int value;        ///< Tag parameter value. Only valid if has_param = 1.
+} sd_script_tag;
 
 /** @brief Animation frame
  *
  * Describes a single frame in animation string.
  */
-typedef struct script_frame {
+typedef struct sd_script_frame {
     int sprite;   ///< Sprite ID that the frame relates to
     int tick_len; ///< Length of the frame in ticks
     vector tags;  ///< A list of tags in this frame
-} script_frame;
+} sd_script_frame;
 
 /** @brief Animation script
  *
  * A single animation string. Contains multiple frames, which then contain tags.
  * A valid string must contain at least a single frame.
  */
-typedef struct script {
+typedef struct sd_script {
     vector frames; ///< List of frames in this string
-} script;
+} sd_script;
 
 /** @brief Initialize script parser
  *
@@ -52,7 +51,7 @@ typedef struct script {
  *
  * @param script Allocated script struct pointer.
  */
-void script_create(script *script);
+void sd_script_create(sd_script *script);
 
 /** @brief Clone a script
  *
@@ -61,7 +60,7 @@ void script_create(script *script);
  * @param src Source script.
  * @param dst Destination script.
  */
-int script_clone(const script *src, script *dst);
+int sd_script_clone(const sd_script *src, sd_script *dst);
 
 /** @brief Free script parser
  *
@@ -70,7 +69,7 @@ int script_clone(const script *src, script *dst);
  *
  * @param script Script struct to free.
  */
-void script_free(script *script);
+void sd_script_free(sd_script *script);
 
 /** @brief Decode animation string
  *
@@ -81,27 +80,27 @@ void script_free(script *script);
  * @retval SD_INVALID_TAG There was an invalid tag in string. invalid_pos will contain problematic position.
  * @retval SD_SUCCESS Decoding was successful.
  *
- * @param script Script structure to fill. Must be formatted using script_create().
+ * @param script Script structure to fill. Must be formatted using sd_script_create().
  * @param str Animation string to parse
  * @param invalid_pos Will contain problematic position in string if SD_INVALID_TAG is returned. Will be ignored if set
  * to NULL.
  */
-int script_decode(script *script, const char *str, int *invalid_pos);
+int sd_script_decode(sd_script *script, const char *str, int *invalid_pos);
 
 /** @brief Decode animation string from a str object
  *
- * Like script_decode(), but takes a str object directly.
+ * Like sd_script_decode(), but takes a str object directly.
  *
  * @retval SD_ANIM_INVALID_STRING String is invalid; eg. doesn't have enough complete frames.
  * @retval SD_INVALID_TAG There was an invalid tag in string. invalid_pos will contain problematic position.
  * @retval SD_SUCCESS Decoding was successful.
  *
- * @param script Script structure to fill. Must be formatted using script_create().
+ * @param script Script structure to fill. Must be formatted using sd_script_create().
  * @param src Animation string to parse
  * @param invalid_pos Will contain problematic position in string if SD_INVALID_TAG is returned. Will be ignored if set
  * to NULL.
  */
-int script_decode_str(script *script, const str *src, int *invalid_pos);
+int sd_script_decode_str(sd_script *script, const str *src, int *invalid_pos);
 
 /** @brief Encode animation string
  *
@@ -115,7 +114,7 @@ int script_decode_str(script *script, const str *src, int *invalid_pos);
  * @param script Script structure to encode
  * @param dst Target string object. Must be initialized!
  */
-int script_encode(const script *script, str *dst);
+int sd_script_encode(const sd_script *script, str *dst);
 
 /** @brief Encode animation frame string
  *
@@ -126,7 +125,7 @@ int script_encode(const script *script, str *dst);
  * @param frame Script frame to encode
  * @param dst Target string object. Must be initialized!
  */
-int script_encode_frame(const script_frame *frame, str *dst);
+int sd_script_encode_frame(const sd_script_frame *frame, str *dst);
 
 /** @brief Find the total duration of the script
  *
@@ -136,7 +135,7 @@ int script_encode_frame(const script_frame *frame, str *dst);
  * @param script Script structure to check
  * @return The total duration of the script in game ticks
  */
-unsigned script_get_total_ticks(const script *script);
+unsigned sd_script_get_total_ticks(const sd_script *script);
 
 /** @brief Find the tick position at the start of the given frame.
  *
@@ -144,7 +143,7 @@ unsigned script_get_total_ticks(const script *script);
  * @param frame_id Frame ID to search
  * @return Tick position at the frame
  */
-int script_get_tick_pos_at_frame(const script *script, int frame_id);
+int sd_script_get_tick_pos_at_frame(const sd_script *script, int frame_id);
 
 /** @brief Find the tick length of the given frame
  *
@@ -152,7 +151,7 @@ int script_get_tick_pos_at_frame(const script *script, int frame_id);
  * @param frame_id Frame ID to search
  * @return Tick length of the frame, 0 if frame_id does not exist.
  */
-int script_get_tick_len_at_frame(const script *script, int frame_id);
+int sd_script_get_tick_len_at_frame(const sd_script *script, int frame_id);
 
 /** @brief Find the sprite ID of the given frame
  *
@@ -160,7 +159,7 @@ int script_get_tick_len_at_frame(const script *script, int frame_id);
  * @param frame_id Frame ID to search
  * @return Sprite ID of the given frame, 0 if frame_id does not exist.
  */
-int script_get_sprite_at_frame(const script *script, int frame_id);
+int sd_script_get_sprite_at_frame(const sd_script *script, int frame_id);
 
 /** @brief Returns the frame at a given tick
  *
@@ -177,7 +176,7 @@ int script_get_sprite_at_frame(const script *script, int frame_id);
  * @param ticks A position in time in game ticks
  * @return Frame pointer or NULL
  */
-const script_frame *script_get_frame_at(const script *script, int ticks);
+const sd_script_frame *sd_script_get_frame_at(const sd_script *script, int ticks);
 
 /** @brief Returns the frame at a given position
  *
@@ -192,14 +191,7 @@ const script_frame *script_get_frame_at(const script *script, int ticks);
  * @param frame_number Frame number to get
  * @return Frame pointer or NULL
  */
-const script_frame *script_get_frame(const script *script, int frame_number);
-
-/** @brief Returns the number of frames in the script
- *
- * @param script The script structure to read
- * @return Number of frames, or 0 if script is NULL
- */
-int script_get_frame_count(const script *script);
+const sd_script_frame *sd_script_get_frame(const sd_script *script, int frame_number);
 
 /** @brief Returns the information of a tag in a frame.
  *
@@ -213,15 +205,7 @@ int script_get_frame_count(const script *script);
  * @param tag Tag to look for. Must have a trailing zero.
  * @return Tag descriptor pointer or NULL
  */
-const script_frame_tag *script_get_tag_by_name(const script_frame *frame, const char *tag);
-
-/** @brief Returns the information of a tag in a frame, by tag id.
- *
- * @param frame Frame structure to read
- * @param id Tag id to look for
- * @return Tag descriptor pointer or NULL
- */
-const script_frame_tag *script_get_tag_by_id(const script_frame *frame, script_tag id);
+const sd_script_tag *sd_script_get_tag(const sd_script_frame *frame, const char *tag);
 
 /** @brief Tells if the frame changed between two points in time
  *
@@ -240,7 +224,7 @@ const script_frame_tag *script_get_tag_by_id(const script_frame *frame, script_t
  * @param tick_stop Position 2
  * @return 1 or 0, whether the frame changed or not.
  */
-int script_frame_changed(const script *script, int tick_start, int tick_stop);
+int sd_script_frame_changed(const sd_script *script, int tick_start, int tick_stop);
 
 /** @brief Returns the array index of frame
  *
@@ -252,7 +236,7 @@ int script_frame_changed(const script *script, int tick_start, int tick_stop);
  * @param frame Frame structure to find the index of
  * @return Index of the frame
  */
-int script_get_frame_index(const script *script, const script_frame *frame);
+int sd_script_get_frame_index(const sd_script *script, const sd_script_frame *frame);
 
 /** @brief Returns the array index of frame at given tick position
  *
@@ -264,7 +248,7 @@ int script_get_frame_index(const script *script, const script_frame *frame);
  * @param ticks Tick position to find
  * @return Index of the frame
  */
-int script_get_frame_index_at(const script *script, unsigned ticks);
+int sd_script_get_frame_index_at(const sd_script *script, unsigned ticks);
 
 /** @brief Tells if the frame is the last frame in animation.
  *
@@ -276,7 +260,7 @@ int script_get_frame_index_at(const script *script, unsigned ticks);
  * @param frame Frame structure to find
  * @return 1 or 0
  */
-int script_is_last_frame(const script *script, const script_frame *frame);
+int sd_script_is_last_frame(const sd_script *script, const sd_script_frame *frame);
 
 /** @brief Tells if the frame index is the last frame in animation.
  *
@@ -288,7 +272,7 @@ int script_is_last_frame(const script *script, const script_frame *frame);
  * @param ticks Tick position to find
  * @return 1 or 0
  */
-int script_is_last_frame_at(const script *script, int ticks);
+int sd_script_is_last_frame_at(const sd_script *script, int ticks);
 
 /** @brief Tells if the frame is the first frame in animation.
  *
@@ -300,7 +284,7 @@ int script_is_last_frame_at(const script *script, int ticks);
  * @param frame Frame structure to find
  * @return 1 or 0
  */
-int script_is_first_frame(const script *script, const script_frame *frame);
+int sd_script_is_first_frame(const sd_script *script, const sd_script_frame *frame);
 
 /** @brief Tells if the frame index is the first frame in animation.
  *
@@ -312,7 +296,7 @@ int script_is_first_frame(const script *script, const script_frame *frame);
  * @param ticks Tick position to find
  * @return 1 or 0
  */
-int script_is_first_frame_at(const script *script, int ticks);
+int sd_script_is_first_frame_at(const sd_script *script, int ticks);
 
 /** @brief Tells if the tag is set in frame
  *
@@ -323,17 +307,7 @@ int script_is_first_frame_at(const script *script, int ticks);
  * @param tag Tag name to find
  * @return 1 or 0
  */
-int script_is_tag_set_by_name(const script_frame *frame, const char *tag);
-
-/** @brief Tells if the tag id is set in frame
- *
- * Tells if the tag, identified by its enum value, is set in the frame.
- *
- * @param frame The frame structure to inspect
- * @param id Tag id to find
- * @return 1 or 0
- */
-int script_is_tag_set_by_id(const script_frame *frame, script_tag id);
+int sd_script_isset(const sd_script_frame *frame, const char *tag);
 
 /** @brief Returns the tag value in frame
  *
@@ -345,15 +319,7 @@ int script_is_tag_set_by_id(const script_frame *frame, script_tag id);
  * @param tag Tag name to find
  * @return Tag parameter value or 0.
  */
-int script_get_tag_value_by_name(const script_frame *frame, const char *tag);
-
-/** @brief Returns the tag value in frame, by tag id
- *
- * @param frame The frame structure to inspect
- * @param id Tag id to find
- * @return Tag parameter value or 0.
- */
-int script_get_tag_value_by_id(const script_frame *frame, script_tag id);
+int sd_script_get(const sd_script_frame *frame, const char *tag);
 
 /** @brief Returns the next frame number with a given sprite ID
  *
@@ -372,7 +338,7 @@ int script_get_tag_value_by_id(const script_frame *frame, script_tag id);
  * @param current_tick Current tick time
  * @return Frame ID or -1 on error
  */
-int script_get_next_frame_with_sprite(const script *script, int sprite_id, unsigned current_tick);
+int sd_script_next_frame_with_sprite(const sd_script *script, int sprite_id, unsigned current_tick);
 
 /** @brief Returns the next frame number with a given tag
  *
@@ -389,16 +355,7 @@ int script_get_next_frame_with_sprite(const script *script, int sprite_id, unsig
  * @param current_tick Current tick time
  * @return Frame ID or -1 on error
  */
-int script_get_next_frame_with_tag(const script *script, const char *tag, uint32_t current_tick);
-
-/** @brief Returns the next frame number with a given tag id
- *
- * @param script Script structure to search through
- * @param id Tag id to search for
- * @param current_tick Current tick time
- * @return Frame ID or -1 on error
- */
-int script_get_next_frame_with_tag_id(const script *script, script_tag id, uint32_t current_tick);
+int sd_script_next_frame_with_tag(const sd_script *script, const char *tag, uint32_t current_tick);
 
 /** @brief Sets a tag for the given frame
  *
@@ -414,7 +371,7 @@ int script_get_next_frame_with_tag_id(const script *script, script_tag id, uint3
  * @param tag Tag to add
  * @param value Value to set, if tag allows values.
  */
-int script_set_tag(script *script, int frame_id, const char *tag, int value);
+int sd_script_set_tag(sd_script *script, int frame_id, const char *tag, int value);
 
 /** @brief Deletes a tag from the given frame
  *
@@ -427,7 +384,7 @@ int script_set_tag(script *script, int frame_id, const char *tag, int value);
  * @param frame_id Frame ID to modify
  * @param tag Tag to delete
  */
-int script_delete_tag(script *script, int frame_id, const char *tag);
+int sd_script_delete_tag(sd_script *script, int frame_id, const char *tag);
 
 /** @brief Append a new frame to the end of the frame list
  *
@@ -440,7 +397,7 @@ int script_delete_tag(script *script, int frame_id, const char *tag);
  * @param tick_len Tick length of the new frame
  * @param sprite_id Sprite ID for the new frame
  */
-int script_append_frame(script *script, int tick_len, int sprite_id);
+int sd_script_append_frame(sd_script *script, int tick_len, int sprite_id);
 
 /** @brief Clear frame tags
  *
@@ -452,7 +409,7 @@ int script_append_frame(script *script, int tick_len, int sprite_id);
  * @param script Script to modify
  * @param frame_id Valid frame ID with tags to clear
  */
-int script_clear_tags(script *script, int frame_id);
+int sd_script_clear_tags(sd_script *script, int frame_id);
 
 /** @brief Set frame tick length
  *
@@ -465,7 +422,7 @@ int script_clear_tags(script *script, int frame_id);
  * @param frame_id Frame ID to set tick length to
  * @param duration Tick length to set
  */
-int script_set_tick_len_at_frame(script *script, int frame_id, int duration);
+int sd_script_set_tick_len_at_frame(sd_script *script, int frame_id, int duration);
 
 /** @brief Set frame sprite ID
  *
@@ -478,21 +435,21 @@ int script_set_tick_len_at_frame(script *script, int frame_id, int duration);
  * @param frame_id Frame ID to set sprite ID to
  * @param sprite_id Sprite ID to set
  */
-int script_set_sprite_at_frame(script *script, int frame_id, int sprite_id);
+int sd_script_set_sprite_at_frame(sd_script *script, int frame_id, int sprite_id);
 
 /** @brief Returns the frame ID by frame letter.
  *
  * @param letter Frame letter ('A', 'B', etc.)
  * @return Frame ID ('A' => 0, ...)
  */
-int script_letter_to_frame(char letter);
+int sd_script_letter_to_frame(char letter);
 
 /** @brief Returns the frame letter by frame ID.
  *
  * @param frame_id Frame ID (0 ... n)
  * @return Frame letter (0 => 'A', ...)
  */
-char script_frame_to_letter(int frame_id);
+char sd_script_frame_to_letter(int frame_id);
 
 /** Initializes a script frame.
  *
@@ -500,13 +457,13 @@ char script_frame_to_letter(int frame_id);
  * @param tick_len Frame length in ticks
  * @param sprite Sprite ID to use
  */
-void script_frame_create(script_frame *frame, int tick_len, int sprite);
+void sd_script_frame_create(sd_script_frame *frame, int tick_len, int sprite);
 
 /** Frees a script frame
  *
  * @param frame Frame to free
  */
-void script_frame_free(script_frame *frame);
+void sd_script_frame_free(sd_script_frame *frame);
 
 /** Add a tag to a frame.
  *
@@ -515,6 +472,6 @@ void script_frame_free(script_frame *frame);
  * @param value Value. This is only used if tag supports it.
  * @return True if tag was valid, false if not.
  */
-bool script_frame_add_tag(script_frame *frame, const char *key, int value);
+bool sd_script_frame_add_tag(sd_script_frame *frame, const char *key, int value);
 
 #endif // SD_SCRIPT_H

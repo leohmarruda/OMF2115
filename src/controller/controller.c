@@ -69,11 +69,10 @@ void controller_free(controller *ctrl) {
     ctrl->free_fun(ctrl);
 }
 
-static inline void ctrl_action_push(ctrl_event **ev, int action, int source) {
+static inline void ctrl_action_push(ctrl_event **ev, int action) {
     ctrl_event *new = omf_calloc(1, sizeof(ctrl_event));
 
     new->type = EVENT_TYPE_ACTION;
-    new->source = source;
     new->event_data.action = action;
 
     if(*ev == NULL) {
@@ -141,12 +140,12 @@ void controller_cmd(controller *ctrl, int action, ctrl_event **ev) {
         }
 
         for(int i = 0; i < 10 && buf->actions[i] != 0; i++) {
-            ctrl_action_push(ev, buf->actions[i], ctrl->type);
+            ctrl_action_push(ev, buf->actions[i]);
         }
         buf->tick = 0;
     } else {
         // no delay
-        ctrl_action_push(ev, action, ctrl->type);
+        ctrl_action_push(ev, action);
     }
 }
 

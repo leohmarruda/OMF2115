@@ -10,7 +10,6 @@
 #include "game/utils/settings.h"
 #include "resources/languages.h"
 #include "utils/allocator.h"
-#include "utils/c_string_util.h"
 #include "utils/log.h"
 #include "utils/miscmath.h"
 #include "utils/random.h"
@@ -176,12 +175,12 @@ static void vs_free(scene *scene) {
     scene_set_userdata(scene, local);
 }
 
-void vs_handle_action(scene *scene, int action, int source) {
+void vs_handle_action(scene *scene, int action) {
     vs_local *local = scene_get_userdata(scene);
     if(dialog_is_visible(&local->too_pathetic_dialog)) {
-        dialog_event(&local->too_pathetic_dialog, action, source);
+        dialog_event(&local->too_pathetic_dialog, action);
     } else if(dialog_is_visible(&local->quit_dialog)) {
-        dialog_event(&local->quit_dialog, action, source);
+        dialog_event(&local->quit_dialog, action);
     } else {
         switch(action) {
             case ACT_KICK:
@@ -238,7 +237,7 @@ void vs_dynamic_tick(scene *scene, int paused) {
     if(i) {
         do {
             if(i->type == EVENT_TYPE_ACTION) {
-                vs_handle_action(scene, i->event_data.action, i->source);
+                vs_handle_action(scene, i->event_data.action);
             } else if(i->type == EVENT_TYPE_CLOSE) {
                 game_state_set_next(scene->gs, SCENE_MENU);
                 return;
@@ -265,9 +264,9 @@ void vs_input_tick(scene *scene) {
     for(ctrl_event *i = menu_ev; i; i = i->next) {
         if(i->type == EVENT_TYPE_ACTION && i->event_data.action == ACT_ESC) {
             if(dialog_is_visible(&local->too_pathetic_dialog)) {
-                dialog_event(&local->too_pathetic_dialog, i->event_data.action, i->source);
+                dialog_event(&local->too_pathetic_dialog, i->event_data.action);
             } else if(dialog_is_visible(&local->quit_dialog)) {
-                dialog_event(&local->quit_dialog, i->event_data.action, i->source);
+                dialog_event(&local->quit_dialog, i->event_data.action);
             } else if(vs_is_singleplayer(scene) && player1->sp_wins != 0 && !player1->chr) {
                 // there's an active singleplayer campaign, confirm quitting
                 dialog_show(&local->quit_dialog, 1);
@@ -294,7 +293,7 @@ void vs_input_tick(scene *scene) {
     if(i) {
         do {
             if(i->type == EVENT_TYPE_ACTION) {
-                vs_handle_action(scene, i->event_data.action, i->source);
+                vs_handle_action(scene, i->event_data.action);
             } else if(i->type == EVENT_TYPE_CLOSE) {
                 game_state_set_next(scene->gs, SCENE_MENU);
             }
@@ -354,7 +353,7 @@ static report_card *create_report_card(const fight_stats *fight_stats) {
     text_set_shadow_style(card->plug_whine, GLYPH_SHADOW_RIGHT | GLYPH_SHADOW_BOTTOM);
     text_set_shadow_color(card->plug_whine, 202);
     text_set_horizontal_align(card->plug_whine, TEXT_ALIGN_CENTER);
-    unsafe_snprintf(text, sizeof(text), lang_get(fight_stats->plug_text + PLUG_TEXT_START), fight_stats->sold);
+    snprintf(text, sizeof(text), lang_get(fight_stats->plug_text + PLUG_TEXT_START), fight_stats->sold);
     text_set_from_c(card->plug_whine, text);
 
     // These are all static. Note that for opponent labels, we reuse the own stats label.

@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "audio/audio.h"
 #include "controller/controller.h"
@@ -44,25 +45,24 @@ static void button_render(component *c) {
         text_set_color(b->text, theme->text.inactive_color);
     }
 
-    const vec2i pos = component_get_pos(c);
     if(b->use_border) {
-        video_draw(&b->border, pos.x, pos.y);
-        text_draw(b->text, pos.x + 2, pos.y + 2);
+        video_draw(&b->border, c->x, c->y);
+        text_draw(b->text, c->x + 2, c->y + 2);
     } else {
-        text_draw(b->text, pos.x, pos.y);
+        text_draw(b->text, c->x, c->y);
     }
 }
 
-static bool button_action(component *c, int action, int source) {
+static int button_action(component *c, int action) {
     button *b = widget_get_obj(c);
     if(action == ACT_KICK || action == ACT_PUNCH) {
         if(b->click_cb) {
             b->click_cb(c, b->userdata);
         }
         audio_play_sound_simple(20, 0);
-        return true;
+        return 0;
     }
-    return false;
+    return 1;
 }
 
 void button_set_userdata(component *c, void *userdata) {
@@ -89,16 +89,15 @@ static void button_init(component *c, const gui_theme *theme) {
     text_set_shadow_style(b->text, b->text_shadow);
     text_set_shadow_color(b->text, b->text_shadow_color);
 
-    const vec2i hint = component_get_size_hint(c);
-    if(hint.x < 0) {
+    if(c->w_hint < 0) {
         text_generate_layout(b->text);
         int text_width = text_get_layout_width(b->text);
-        component_set_size_hints(c, text_width + (b->use_border ? 4 : 0), hint.y);
+        component_set_size_hints(c, text_width + (b->use_border ? 4 : 0), c->h_hint);
     }
-    if(hint.y < 0) {
+    if(c->h_hint < 0) {
         text_generate_layout(b->text);
         int text_height = text_get_layout_height(b->text);
-        component_set_size_hints(c, hint.x, text_height + (b->use_border ? 4 : 0));
+        component_set_size_hints(c, c->w_hint, text_height + (b->use_border ? 4 : 0));
     }
 }
 
@@ -111,7 +110,6 @@ static void button_layout(component *c, int x, int y, int w, int h) {
     text_set_horizontal_align(b->text, TEXT_ALIGN_CENTER);
     if(b->use_border) {
         text_set_bounding_box(b->text, w - 4, h - 4);
-        surface_free(&b->border);
         menu_background_border_create(&b->border, w, h, theme->dialog.border_color);
     } else {
         text_set_bounding_box(b->text, w, h);

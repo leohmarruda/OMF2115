@@ -23,11 +23,12 @@ typedef struct {
 } language_menu_data;
 
 void menu_language_done(component *c, void *u) {
-    language_menu_data *local = menu_get_userdata(component_get_parent(c));
+    language_menu_data *local = menu_get_userdata(c->parent);
     settings_language *l = &settings_get()->language;
 
     // Set menu as finished
-    menu_finish(component_get_parent(c));
+    menu *m = sizer_get_obj(c->parent);
+    m->finished = 1;
 
     if(strcmp(l->language, local->language_filenames[local->selected_language]) != 0) {
         omf_free(l->language);
@@ -53,7 +54,8 @@ void menu_language_free(component *c) {
 }
 
 void menu_language_submenu_done(component *c, component *submenu) {
-    menu_finish(c);
+    menu *m = sizer_get_obj(c);
+    m->finished = 1;
 }
 
 component *menu_language_create(scene *s) {

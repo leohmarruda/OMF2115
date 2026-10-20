@@ -166,15 +166,13 @@ void object_palette_transform(object *obj);
 void object_debug(object *obj);
 void object_static_tick(object *obj);
 void object_dynamic_tick(object *obj);
-void object_dynamic_tick_advance(object *obj);
-void object_dynamic_tick_apply(object *obj);
 void object_set_tick_pos(object *obj, int tick);
 void object_move(object *obj);
 float object_distance(object *a, object *b);
 void object_collide(object *a, object *b);
 int object_act(object *obj, int action);
-int object_is_finished(object *obj);
-void object_set_finished(object *obj, bool finished);
+int object_finished(object *obj);
+void object_set_finished(object *obj);
 void object_free(object *obj);
 
 int object_clone(object *src, object *dst, game_state *gs);
@@ -183,6 +181,7 @@ int object_clone_free(object *obj);
 void object_attach_to(object *obj, const object *attach_to);
 
 void object_set_stride(object *obj, int stride);
+void object_set_delay(object *obj, int delay);
 void object_set_playback_direction(object *obj, int dir);
 
 void object_set_stl(object *obj, const char *ptr);

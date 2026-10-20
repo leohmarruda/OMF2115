@@ -2,8 +2,8 @@
 #include <math.h>
 
 #include "audio/audio.h"
+#include "formats/error.h"
 #include "formats/script.h"
-#include "formats/tag_list_helpers.h"
 #include "game/audio/music_tracker.h"
 #include "game/game_player.h"
 #include "game/game_state.h"
@@ -11,7 +11,6 @@
 #include "game/protos/object.h"
 #include "game/protos/player.h"
 #include "resources/ids.h"
-#include "resources/script_cache.h"
 #include "utils/log.h"
 #include "utils/miscmath.h"
 #include "utils/random.h"
@@ -31,12 +30,29 @@ static void player_clear_frame(object *obj) {
 
 void player_create(object *obj) {
     memset(&obj->animation_state, 0, sizeof(player_animation_state));
-    script_reader_load(&obj->animation_state.reader, NULL);
+    obj->animation_state.previous_tick = ~0u;
+    sd_script_create(&obj->animation_state.parser);
     player_clear_frame(obj);
 }
 
+void player_clone(object *src, object *dst) {
+    sd_script_clone(&src->animation_state.parser, &dst->animation_state.parser);
+}
+
+void player_free(object *obj) {
+    sd_script_free(&obj->animation_state.parser);
+}
+
 void player_reload_with_str(object *obj, const char *custom_str) {
-    script_reader_load(&obj->animation_state.reader, script_cache_get(custom_str));
+    // Free and reload parser
+    sd_script_free(&obj->animation_state.parser);
+    sd_script_create(&obj->animation_state.parser);
+    int ret;
+    int err_pos;
+    ret = sd_script_decode(&obj->animation_state.parser, custom_str, &err_pos);
+    if(ret != SD_SUCCESS) {
+        log_error("Decoder error %s at position %d in string \"%s\"", sd_get_error(ret), err_pos, custom_str);
+    }
 
     // Set player state
     player_reset(obj);
@@ -53,52 +69,97 @@ void player_reload(object *obj) {
 }
 
 void player_reset(object *obj) {
-    script_reader_reset(&obj->animation_state.reader);
-    obj->animation_state.phase = ANIM_PHASE_HOLD;
+    obj->animation_state.previous_tick = ~0u;
+    obj->animation_state.current_tick = 0;
+    obj->animation_state.finished = 0;
+    obj->animation_state.previous = -1;
     obj->animation_state.disable_d = 0;
-    obj->animation_state.pending_apply = false;
 }
 
-int player_frame_isset(const object *obj, const script_tag tag) {
-    return script_reader_isset(&obj->animation_state.reader, tag);
+int player_frame_isset(const object *obj, const char *tag) {
+    const sd_script_frame *frame =
+        sd_script_get_frame_at(&obj->animation_state.parser, obj->animation_state.current_tick);
+    return sd_script_isset(frame, tag);
 }
 
-int player_frame_get(const object *obj, const script_tag tag) {
-    return script_reader_get(&obj->animation_state.reader, tag);
+int player_frame_get(const object *obj, const char *tag) {
+    const sd_script_frame *frame =
+        sd_script_get_frame_at(&obj->animation_state.parser, obj->animation_state.current_tick);
+    return sd_script_get(frame, tag);
+}
+
+/*
+ * Try to spread <delay> ticks over the 'startup' frames; those that don't spawn projectiles or have hit coordinates
+ */
+void player_set_delay(object *obj, int delay) {
+    // find the first frame that spawns a projectile, if any
+    int r = sd_script_next_frame_with_tag(&obj->animation_state.parser, "m", 0);
+    int frames = (r >= 0) ? r : 99;
+
+    // find the first frame with hit coordinates
+    iterator it;
+    collision_coord *cc;
+    vector_iter_begin(&obj->cur_animation->collision_coords, &it);
+    foreach(it, cc) {
+        r = sd_script_next_frame_with_sprite(&obj->animation_state.parser, cc->frame_index, 0);
+        frames = (r >= 0 && r < frames) ? r : frames;
+    }
+
+    // No frame found, just quit now.
+    if(!frames || !delay || frames == 99) {
+        return;
+    }
+
+    log_debug("Animation has %d initializer frames", frames);
+
+    int delay_per_frame = delay / frames;
+    int rem = delay % frames;
+    for(int i = 0; i < frames; i++) {
+        int duration = sd_script_get_tick_len_at_frame(&obj->animation_state.parser, i);
+        int old_dur = duration;
+        int new_duration = duration + delay_per_frame;
+        if(rem) {
+            new_duration++;
+            rem--;
+        }
+
+        sd_script_set_tick_len_at_frame(&obj->animation_state.parser, i, new_duration);
+        duration = sd_script_get_tick_len_at_frame(&obj->animation_state.parser, i);
+        log_debug("changed duration of frame %d from %d to %d", i, old_dur, duration);
+    }
 }
 
 #ifdef DEBUGMODE
-void player_describe_frame(const script_frame *frame) {
+void player_describe_frame(const sd_script_frame *frame) {
     log_debug("Frame %c%d", 65 + frame->sprite, frame->tick_len);
     for(unsigned i = 0; i < vector_size(&frame->tags); i++) {
-        const script_frame_tag *tag = vector_get(&frame->tags, i);
+        sd_script_tag *tag = vector_get(&frame->tags, i);
         if(tag->has_param) {
-            log_debug("    %3s%5d   %s", script_get_frame_tag_name(tag), tag->value,
-                      script_get_frame_tag_description(tag));
+            log_debug("    %3s%5d   %s", tag->key, tag->value, tag->desc);
         } else {
-            log_debug("    %3s        %s", script_get_frame_tag_name(tag), script_get_frame_tag_description(tag));
+            log_debug("    %3s        %s", tag->key, tag->desc);
         }
     }
 }
 
 void player_describe_object(object *obj) {
     log_debug("Object:");
-    log_debug("  - Start: %f, %f", obj->start.x, obj->start.y);
-    log_debug("  - Position: %f, %f", obj->pos.x, obj->pos.y);
-    log_debug("  - Velocity: %f, %f", obj->vel.x, obj->vel.y);
+    log_debug("  - Start: %d, %d", obj->start.x, obj->start.y);
+    log_debug("  - Position: %d, %d", obj->pos.x, obj->pos.y);
+    log_debug("  - Velocity: %d, %d", obj->vel.x, obj->vel.y);
     if(obj->cur_sprite_id) {
         sprite *cur_sprite = animation_get_sprite(obj->cur_animation, obj->cur_sprite_id);
         log_debug("  - Pos: %d, %d", cur_sprite->pos.x, cur_sprite->pos.y);
         log_debug("  - Size: %d, %d", cur_sprite->data->w, cur_sprite->data->h);
         player_sprite_state *rstate = &obj->sprite_state;
-        log_debug("CURRENT = %f - %d + %d - %d", obj->pos.y, cur_sprite->pos.y, rstate->o_correction.y,
+        log_debug("CURRENT = %d - %d + %d - %d", obj->pos.y, cur_sprite->pos.y, rstate->o_correction.y,
                   cur_sprite->data->h);
     }
 }
 
-void player_describe_mp_flags(const script_frame *frame, int mp) {
+void player_describe_mp_flags(const sd_script_frame *frame, int mp) {
     if(mp != 0) {
-        log_debug("mp flags set for new animation %d:", script_get_tag_value_by_id(frame, TAG_M));
+        log_debug("mp flags set for new animation %d:", sd_script_get(frame, "m"));
         if(mp & 0x1) {
             log_debug(" * 0x01: NON-HAR Sprite");
         }
@@ -127,93 +188,44 @@ void player_describe_mp_flags(const script_frame *frame, int mp) {
 }
 #endif /* DEBUGMODE */
 
-void player_run_advance(object *obj) {
+void player_run(object *obj) {
+    // Some vars for easier life
     player_animation_state *state = &obj->animation_state;
-    state->pending_apply = false;
-    if(state->phase == ANIM_PHASE_FINISHED) {
+    player_sprite_state *rstate = &obj->sprite_state;
+    object *enemy = game_state_find_object(obj->gs, state->enemy_obj_id);
+    // log_debug("i am %d, enemy is %d", obj->id, state->enemy_obj_id);
+    if(state->finished) {
         return;
     }
 
-    script_reader *reader = &state->reader;
-    const script *script = script_reader_get_script(reader);
-
-    // First run; make sure we don't advance the script, as we want to run tick 0.
-    if(state->phase == ANIM_PHASE_HOLD) {
-        state->phase = ANIM_PHASE_RUNNING;
-        const script_frame *frame = script_reader_frame(reader);
-        if(frame != NULL) {
-            object_select_sprite(obj, frame->sprite);
-        }
-        state->pending_apply = true;
-        return;
-    }
-
-    // Tick management; a 'd' tag redirects the reader, otherwise advance.
-    const script_frame *frame = script_reader_frame(reader);
-    script_reader_mark_previous(reader);
-    if(frame != NULL && script_is_tag_set_by_id(frame, TAG_D) && !state->disable_d) {
-        int tick_value = script_get_tag_value_by_id(frame, TAG_D);
-        if(tick_value >= 0) {
-            script_reader_seek(reader, tick_value + 1);
-            state->looping = true;
-        } else {
-            script_reader_seek(reader, script_get_total_ticks(script) + tick_value);
-        }
-    } else {
-        script_reader_advance(reader, state->reverse ? -1 : 1);
-    }
+    const sd_script_frame *frame = sd_script_get_frame_at(&state->parser, state->current_tick);
 
     // Animation has ended ?
-    frame = script_reader_frame(reader);
     if(frame == NULL) {
         if(state->repeat) {
             player_reset(obj);
-            state->phase = ANIM_PHASE_RUNNING;
-            frame = script_reader_frame(reader);
+            frame = sd_script_get_frame_at(&state->parser, state->current_tick);
         } else {
-            state->phase = ANIM_PHASE_FINISHED;
+            state->finished = 1;
             if(obj->finish != NULL) {
                 obj->finish(obj);
             }
             // let har_finish hold last sprite of victory animation indefinitely
-            // Note that the phase can be modified by the obj->finish() call.
-            if(state->phase == ANIM_PHASE_FINISHED) {
+            // Note that state->finished can be modified by the obj->finish() call.
+            if(state->finished) {
                 obj->cur_sprite_id = -1;
             }
             return;
         }
     }
-    if(frame == NULL) {
-        return;
-    }
 
-    // Select the sprite here so collision checks see the current frame.
-    if(script_reader_frame_changed(reader)) {
-        object_select_sprite(obj, frame->sprite);
-    }
-    state->pending_apply = true;
-}
-
-void player_run_apply(object *obj) {
-    // Some vars for easier life
-    player_animation_state *state = &obj->animation_state;
-    player_sprite_state *rstate = &obj->sprite_state;
-    object *enemy = game_state_find_object(obj->gs, state->enemy_obj_id);
-    state->pending_apply = false;
-    if(state->phase == ANIM_PHASE_FINISHED) {
-        return;
-    }
-
-    const script *script = script_reader_get_script(&state->reader);
-    const script_frame *frame = script_reader_frame(&state->reader);
-    if(frame == NULL) {
-        return;
-    }
+    // This should really never happen, but just make sure anyway.
+    assert(frame != NULL);
 
     // Get MP flag content, set to 0 if not set.
-    uint8_t mp = script_is_tag_set_by_id(frame, TAG_MP) ? script_get_tag_value_by_id(frame, TAG_MP) & 0xFF : 0;
+    uint8_t mp = sd_script_isset(frame, "mp") ? sd_script_get(frame, "mp") & 0xFF : 0;
 
-    if(script_is_tag_set_by_id(frame, TAG_E) && enemy && !script_is_tag_set_by_id(frame, TAG_AM)) {
+    if(sd_script_isset(frame, "e") && enemy && !sd_script_isset(frame, "am")) {
 
         // Set speed to 0, since we're being controlled by animation tag system
         obj->vel.x = 0;
@@ -227,10 +239,10 @@ void player_run_apply(object *obj) {
     }
 
     if(enemy) {
-        enemy->crossup_protection = script_is_tag_set_by_id(frame, TAG_AG);
+        enemy->crossup_protection = sd_script_isset(frame, "ag");
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_AR)) {
+    if(sd_script_isset(frame, "ar")) {
         object_set_direction(obj, object_get_direction(obj) * -1);
     }
 
@@ -238,19 +250,19 @@ void player_run_apply(object *obj) {
     obj->wall_collision = false;
     // See if x+/- or y+/- are set and save values
     int trans_x = 0, trans_y = 0;
-    if(script_is_tag_set_by_id(frame, TAG_Y_MINUS)) {
-        trans_y = script_get_tag_value_by_id(frame, TAG_Y_MINUS) * -1;
-    } else if(script_is_tag_set_by_id(frame, TAG_Y_PLUS)) {
-        trans_y = script_get_tag_value_by_id(frame, TAG_Y_PLUS);
+    if(sd_script_isset(frame, "y-")) {
+        trans_y = sd_script_get(frame, "y-") * -1;
+    } else if(sd_script_isset(frame, "y+")) {
+        trans_y = sd_script_get(frame, "y+");
     }
-    if(script_is_tag_set_by_id(frame, TAG_X_MINUS)) {
-        trans_x = script_get_tag_value_by_id(frame, TAG_X_MINUS) * -1 * object_get_direction(obj);
-    } else if(script_is_tag_set_by_id(frame, TAG_X_PLUS)) {
-        trans_x = script_get_tag_value_by_id(frame, TAG_X_PLUS) * object_get_direction(obj);
+    if(sd_script_isset(frame, "x-")) {
+        trans_x = sd_script_get(frame, "x-") * -1 * object_get_direction(obj);
+    } else if(sd_script_isset(frame, "x+")) {
+        trans_x = sd_script_get(frame, "x+") * object_get_direction(obj);
     }
 
     // Check if frame changed from the previous tick
-    state->entered_frame = script_reader_frame_changed(&state->reader);
+    state->entered_frame = sd_script_frame_changed(&state->parser, state->previous_tick, state->current_tick);
     if(state->entered_frame) {
 #ifdef DEBUGMODE
         // player_describe_frame(frame);
@@ -259,7 +271,7 @@ void player_run_apply(object *obj) {
 #endif
         player_clear_frame(obj);
 
-        if(script_is_tag_set_by_id(frame, TAG_AC)) {
+        if(sd_script_isset(frame, "ac")) {
             // force the har to face the center of the arena
             if(obj->pos.x > 160) {
                 object_set_direction(obj, OBJECT_FACE_LEFT);
@@ -268,8 +280,8 @@ void player_run_apply(object *obj) {
             }
         }
 
-        // Collision reads this flag one tick behind the frame it tests
-        if(script_is_tag_set_by_id(frame, TAG_N)) {
+        // TODO this needs to somehow be delayed for 1 tick
+        if(sd_script_isset(frame, "n")) {
             obj->hit_pixels_disabled = true;
         } else {
             obj->hit_pixels_disabled = false;
@@ -278,46 +290,47 @@ void player_run_apply(object *obj) {
         // BJ sets new animation for our HAR
         // TODO this is still wrong somehow, there's some kind of conditional
         // but it fixes gargoyle's scrap looping and some other stuff
-        if(script_is_tag_set_by_id(frame, TAG_BJ)) {
-            int new_ani = script_get_tag_value_by_id(frame, TAG_BJ);
+        if(sd_script_isset(frame, "bj")) {
+            int new_ani = sd_script_get(frame, "bj");
             har_set_ani(obj, new_ani, 0);
             if(new_ani == ANIM_STANDUP) {
                 har_face_enemy(obj, enemy);
             }
+            object_dynamic_tick(obj);
             return;
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_MC)) {
+        if(sd_script_isset(frame, "mc")) {
             // if UC is also set, when UC proceeds to the next animation, set the object gravity to the HAR's gravity
             obj->object_flags |= OBJECT_FLAGS_MC;
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_UD)) {
+        if(sd_script_isset(frame, "ud")) {
             // object moves to next animation when owning HAR is hit
             obj->object_flags |= OBJECT_FLAGS_NEXT_ANIM_ON_OWNER_HIT;
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_UZ)) {
+        if(sd_script_isset(frame, "uz")) {
             // object moves to next animation when enemy HAR is hit
             obj->object_flags |= OBJECT_FLAGS_NEXT_ANIM_ON_ENEMY_HIT;
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_CP) && obj->should_hitpause) {
+        if(sd_script_isset(frame, "cp") && obj->should_hitpause) {
             obj->should_hitpause = false;
             game_state_hit_pause(obj->gs);
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_MU)) {
+        if(sd_script_isset(frame, "mu")) {
             // mu tags depend on a previous mm tag, so we need to iterate all of then tags, keeping track of the last mm
             // value we spawn
             iterator it;
-            script_frame_tag *tag;
+            sd_script_tag *tag;
             vector_iter_begin(&frame->tags, &it);
             int mm = 0;
             foreach(it, tag) {
-                if(tag->key == TAG_MM) {
+                if(strcmp(tag->key, "mm") == 0) {
                     mm = tag->value;
-                } else if(tag->key == TAG_MU && mm) {
+                } else if(strcmp(tag->key, "mu") == 0 && mm) {
                     if(obj->cur_animation->id == 9) {
                         // I know this might be hard to believe, but the mu tag applies to the ENEMY if you're in
                         // animation 9. This is so the shadow grab lockout lives as long as the grabbed har is
@@ -330,9 +343,9 @@ void player_run_apply(object *obj) {
             }
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_BM) && enemy) {
+        if(sd_script_isset(frame, "bm") && enemy) {
             int destination = 160;
-            if(script_is_tag_set_by_id(frame, TAG_AM) && script_is_tag_set_by_id(frame, TAG_E)) {
+            if(sd_script_isset(frame, "am") && sd_script_isset(frame, "e")) {
                 // destination is the enemy's position
                 destination = enemy->pos.x - trans_x;
                 if(obj->pos.x > enemy->pos.x) {
@@ -341,7 +354,7 @@ void player_run_apply(object *obj) {
                     object_set_direction(obj, OBJECT_FACE_RIGHT);
                 }
                 destination = max2(ARENA_LEFT_WALL, min2(ARENA_RIGHT_WALL, destination));
-            } else if(script_is_tag_set_by_id(frame, TAG_CF)) {
+            } else if(sd_script_isset(frame, "cf")) {
                 // shadow's scrap, position is in the corner behind shadow
                 if(object_get_direction(enemy) == OBJECT_FACE_RIGHT) {
                     destination = ARENA_RIGHT_WALL;
@@ -357,17 +370,15 @@ void player_run_apply(object *obj) {
             }
             // clear this
             trans_x = 0;
-            if(script_get_tag_value_by_id(frame, TAG_BM) == 10 && destination > 0 &&
-               fabsf(obj->pos.x - destination) > 5.0) {
-                log_debug("HAR walk to %d from %f", destination, obj->pos.x);
+            if(sd_script_get(frame, "bm") == 10 && destination > 0 && fabsf(obj->pos.x - destination) > 5.0) {
+                log_debug("HAR walk to %d from %d", destination, obj->pos.x);
                 har_walk_to(obj, destination);
-                state->phase = ANIM_PHASE_HOLD;
                 return;
             }
         }
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_H)) {
+    if(sd_script_isset(frame, "h")) {
         // Hover, reset all velocities to 0 on every frame
         obj->vel.x = 0;
         obj->vel.y = 0;
@@ -375,15 +386,15 @@ void player_run_apply(object *obj) {
         obj->cvel.y = 0;
     }
 
-    int ab_flag = script_is_tag_set_by_id(frame, TAG_AB); // Pass through walls
+    int ab_flag = sd_script_isset(frame, "ab"); // Pass through walls
 
     // Set to ground
-    if(script_is_tag_set_by_id(frame, TAG_G)) {
+    if(sd_script_isset(frame, "g")) {
         obj->vel.y = 0;
         obj->pos.y = ARENA_FLOOR;
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_AD)) {
+    if(sd_script_isset(frame, "ad")) {
         har *har = object_get_userdata(obj);
         int new_facing = obj->direction;
         switch(har->inputs[0]) {
@@ -407,7 +418,7 @@ void player_run_apply(object *obj) {
         }
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_AT) && enemy) {
+    if(sd_script_isset(frame, "at") && enemy) {
         har *har = object_get_userdata(obj);
         switch(har->inputs[0]) {
             case '6':
@@ -427,7 +438,7 @@ void player_run_apply(object *obj) {
 
     // Handle vx+/-, vy+/-, x+/-. y+/-
     if(trans_x || trans_y) {
-        if(script_is_tag_set_by_id(frame, TAG_V)) {
+        if(sd_script_isset(frame, "v")) {
             obj->vel.x = (trans_x * (mp & 0x20 ? -1 : 1)) * obj->horizontal_velocity_modifier;
             obj->vel.y = trans_y * obj->horizontal_velocity_modifier;
             // log_debug("vel x+%d, y+%d to x=%f, y=%f", trans_x * (mp & 0x20 ? -1 : 1), trans_y, obj->vel.x,
@@ -436,13 +447,13 @@ void player_run_apply(object *obj) {
             obj->pos.x += trans_x * (mp & 0x20 ? -1 : 1);
             if(!ab_flag) {
                 if(obj->pos.x < ARENA_LEFT_WALL && obj->group == GROUP_HAR) {
-                    if(script_is_tag_set_by_id(frame, TAG_E) && enemy) {
+                    if(sd_script_isset(frame, "e") && enemy) {
                         enemy->pos.x += ARENA_LEFT_WALL - obj->pos.x;
                     }
                     obj->pos.x = ARENA_LEFT_WALL;
                     obj->wall_collision = true;
                 } else if(obj->pos.x > ARENA_RIGHT_WALL && obj->group == GROUP_HAR) {
-                    if(script_is_tag_set_by_id(frame, TAG_E) && enemy) {
+                    if(sd_script_isset(frame, "e") && enemy) {
                         enemy->pos.x -= obj->pos.x - ARENA_RIGHT_WALL;
                     }
                     obj->pos.x = ARENA_RIGHT_WALL;
@@ -469,7 +480,7 @@ void player_run_apply(object *obj) {
     // If frame changed, do something
     if(state->entered_frame) {
         // Animation creation command
-        if(script_is_tag_set_by_id(frame, TAG_M) && state->spawn != NULL) {
+        if(sd_script_isset(frame, "m") && state->spawn != NULL) {
             int mx = 0;
             int my = 0;
             float vx = 0;
@@ -477,78 +488,78 @@ void player_run_apply(object *obj) {
 
             // Instance count
             int instances = 1;
-            if(script_is_tag_set_by_id(frame, TAG_MI)) {
-                instances = script_get_tag_value_by_id(frame, TAG_MI);
+            if(sd_script_isset(frame, "mi")) {
+                instances = sd_script_get(frame, "mi");
                 log_debug("spawning %d instances", instances);
             }
 
             // Staring X coordinate for new animation
-            if(script_is_tag_set_by_id(frame, TAG_MX)) {
-                mx = obj->start.x + (script_get_tag_value_by_id(frame, TAG_MX) * object_get_direction(obj));
+            if(sd_script_isset(frame, "mx")) {
+                mx = obj->start.x + (sd_script_get(frame, "mx") * object_get_direction(obj));
             }
 
             // Staring Y coordinate for new animation
-            if(script_is_tag_set_by_id(frame, TAG_MY)) {
-                my = obj->start.y + script_get_tag_value_by_id(frame, TAG_MY);
+            if(sd_script_isset(frame, "my")) {
+                my = obj->start.y + sd_script_get(frame, "my");
             }
 
             // Angle/speed for new animation
-            if(script_is_tag_set_by_id(frame, TAG_MA)) {
-                int ma = script_get_tag_value_by_id(frame, TAG_MA);
+            if(sd_script_isset(frame, "ma")) {
+                int ma = sd_script_get(frame, "ma");
                 vx = cosf(ma);
                 vy = sinf(ma);
                 log_debug("MA is set! angle = %d, vx = %f, vy = %f", ma, vx, vy);
             }
 
             // Special positioning for certain desert arena sprites
-            int ms = script_is_tag_set_by_id(frame, TAG_MS);
+            int ms = sd_script_isset(frame, "ms");
 
             // Gravity for new object
-            int mg = script_is_tag_set_by_id(frame, TAG_MG) ? script_get_tag_value_by_id(frame, TAG_MG) : 0;
+            int mg = sd_script_isset(frame, "mg") ? sd_script_get(frame, "mg") : 0;
 
             for(int i = 0; i < instances; i++) {
                 // random starting coordinates
-                if(script_is_tag_set_by_id(frame, TAG_MRX)) {
-                    int mrx = script_get_tag_value_by_id(frame, TAG_MRX);
-                    int mm = script_is_tag_set_by_id(frame, TAG_MM) ? script_get_tag_value_by_id(frame, TAG_MM) : mrx;
+                if(sd_script_isset(frame, "mrx")) {
+                    int mrx = sd_script_get(frame, "mrx");
+                    int mm = sd_script_isset(frame, "mm") ? sd_script_get(frame, "mm") : mrx;
                     mx = random_int(&obj->gs->rand, 320 - 2 * mm) + mrx;
                     log_debug("randomized mx as %d", mx);
                 }
-                if(script_is_tag_set_by_id(frame, TAG_MRY)) {
-                    int mry = script_get_tag_value_by_id(frame, TAG_MRY);
-                    int mm = script_is_tag_set_by_id(frame, TAG_MM) ? script_get_tag_value_by_id(frame, TAG_MM) : mry;
+                if(sd_script_isset(frame, "mry")) {
+                    int mry = sd_script_get(frame, "mry");
+                    int mm = sd_script_isset(frame, "mm") ? sd_script_get(frame, "mm") : mry;
                     my = random_int(&obj->gs->rand, 320 - 2 * mm) + mry;
                     log_debug("randomized my as %d", my);
                 }
 
-                state->spawn(obj, script_get_tag_value_by_id(frame, TAG_M), vec2i_create(mx, my), vec2f_create(vx, vy),
-                             mp, ms, mg, state->spawn_userdata);
+                state->spawn(obj, sd_script_get(frame, "m"), vec2i_create(mx, my), vec2f_create(vx, vy), mp, ms, mg,
+                             state->spawn_userdata);
             }
         }
 
         // Animation deletion
-        if(script_is_tag_set_by_id(frame, TAG_MD) && state->destroy != NULL) {
-            state->destroy(obj, script_get_tag_value_by_id(frame, TAG_MD), state->destroy_userdata);
+        if(sd_script_isset(frame, "md") && state->destroy != NULL) {
+            state->destroy(obj, sd_script_get(frame, "md"), state->destroy_userdata);
         }
 
         // Music playback
-        if(script_is_tag_set_by_id(frame, TAG_SMO)) {
-            if(script_get_tag_value_by_id(frame, TAG_SMO) == 0) {
+        if(sd_script_isset(frame, "smo")) {
+            if(sd_script_get(frame, "smo") == 0) {
                 music_tracker_stop();
                 return;
             }
-            music_tracker_play(PSM_END + (script_get_tag_value_by_id(frame, TAG_SMO) - 1));
+            music_tracker_play(PSM_END + (sd_script_get(frame, "smo") - 1));
         }
-        if(script_is_tag_set_by_id(frame, TAG_SMF)) {
+        if(sd_script_isset(frame, "smf")) {
             music_tracker_stop();
         }
 
         // Sound playback
-        if(script_is_tag_set_by_id(frame, TAG_S) && obj->sound_translation_table) {
-            int sound_id = obj->sound_translation_table[script_get_tag_value_by_id(frame, TAG_S)] - 1;
+        if(sd_script_isset(frame, "s") && obj->sound_translation_table) {
+            int sound_id = obj->sound_translation_table[sd_script_get(frame, "s")] - 1;
 
             bool allow_sound_playback = true;
-            if(script_is_tag_set_by_id(frame, TAG_T)) {
+            if(sd_script_isset(frame, "t")) {
                 const int enemy_anim = (enemy != NULL && enemy->cur_animation != NULL) ? enemy->cur_animation->id : -1;
                 allow_sound_playback = (enemy_anim == ANIM_DAMAGE || enemy_anim == ANIM_STANDING_BLOCK ||
                                         enemy_anim == ANIM_CROUCHING_BLOCK || obj->gs->hit_pause > 0);
@@ -559,41 +570,41 @@ void player_run_apply(object *obj) {
 
             sound_opts opts;
             sound_opts_init(&opts);
-            if(script_is_tag_set_by_id(frame, TAG_L)) {
+            if(sd_script_isset(frame, "l")) {
                 // Original game: `l` is 0..63 and the driver volume is loudness*2 clamped to 127.
-                opts.volume = clamp(script_get_tag_value_by_id(frame, TAG_L) * 2, 0, 127);
+                opts.volume = clamp(sd_script_get(frame, "l") * 2, 0, 127);
             }
-            if(script_is_tag_set_by_id(frame, TAG_SB)) {
-                opts.panning = clamp(script_get_tag_value_by_id(frame, TAG_SB), -100, 100);
+            if(sd_script_isset(frame, "sb")) {
+                opts.panning = clamp(sd_script_get(frame, "sb"), -100, 100);
             } else {
                 opts.panning = clamp((obj->pos.x - 160) * 100 / 160, -100, 100);
             }
-            if(script_is_tag_set_by_id(frame, TAG_SF)) {
-                opts.pitch = script_get_tag_value_by_id(frame, TAG_SF);
+            if(sd_script_isset(frame, "sf")) {
+                opts.pitch = sd_script_get(frame, "sf");
                 assert(opts.pitch >= -128 && opts.pitch <= 128);
             }
-            if(script_is_tag_set_by_id(frame, TAG_SP)) {
-                opts.priority = script_get_tag_value_by_id(frame, TAG_SP);
+            if(sd_script_isset(frame, "sp")) {
+                opts.priority = sd_script_get(frame, "sp");
             }
-            if(script_is_tag_set_by_id(frame, TAG_SC)) {
-                const int sc = script_get_tag_value_by_id(frame, TAG_SC);
+            if(sd_script_isset(frame, "sc")) {
+                const int sc = sd_script_get(frame, "sc");
                 if(sc == 0) {
                     opts.stop_duplicate = true;
                 } else {
                     opts.channel = clamp(sc - 1, 0, SOUND_CHANNEL_COUNT - 1);
                 }
             }
-            if(script_is_tag_set_by_id(frame, TAG_SD)) {
+            if(sd_script_isset(frame, "sd")) {
                 opts.skip_duplicate = true;
             }
-            if(script_is_tag_set_by_id(frame, TAG_SA) || (sound_id >= 0 && sound_id < 10)) {
+            if(sd_script_isset(frame, "sa") || (sound_id >= 0 && sound_id < 10)) {
                 opts.follow_object_id = obj->id;
             }
-            if(script_is_tag_set_by_id(frame, TAG_SL)) {
-                opts.panning_end = clamp(script_get_tag_value_by_id(frame, TAG_SL), -100, 100);
+            if(sd_script_isset(frame, "sl")) {
+                opts.panning_end = clamp(sd_script_get(frame, "sl"), -100, 100);
                 opts.has_panning_sweep = true;
-            } else if(script_is_tag_set_by_id(frame, TAG_SE)) {
-                opts.panning_end = clamp(script_get_tag_value_by_id(frame, TAG_SE), -100, 100);
+            } else if(sd_script_isset(frame, "se")) {
+                opts.panning_end = clamp(sd_script_get(frame, "se"), -100, 100);
                 opts.has_panning_sweep = true;
             }
             if(allow_sound_playback) {
@@ -602,30 +613,30 @@ void player_run_apply(object *obj) {
         }
 
         // Blend mode stuff
-        if(script_is_tag_set_by_id(frame, TAG_BB)) {
-            rstate->screen_shake_vertical = script_get_tag_value_by_id(frame, TAG_BB);
+        if(sd_script_isset(frame, "bb")) {
+            rstate->screen_shake_vertical = sd_script_get(frame, "bb");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BF)) {
-            rstate->blend_finish = script_get_tag_value_by_id(frame, TAG_BF);
+        if(sd_script_isset(frame, "bf")) {
+            rstate->blend_finish = sd_script_get(frame, "bf");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BL)) {
-            rstate->screen_shake_horizontal = script_get_tag_value_by_id(frame, TAG_BL);
+        if(sd_script_isset(frame, "bl")) {
+            rstate->screen_shake_horizontal = sd_script_get(frame, "bl");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BS)) {
-            rstate->blend_start = script_get_tag_value_by_id(frame, TAG_BS);
+        if(sd_script_isset(frame, "bs")) {
+            rstate->blend_start = sd_script_get(frame, "bs");
         }
 
         // Palette tricks
-        if(script_is_tag_set_by_id(frame, TAG_BPD)) {
-            rstate->pal_ref_index = script_get_tag_value_by_id(frame, TAG_BPD);
+        if(sd_script_isset(frame, "bpd")) {
+            rstate->pal_ref_index = sd_script_get(frame, "bpd");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BPN)) {
-            rstate->pal_entry_count = script_get_tag_value_by_id(frame, TAG_BPN);
+        if(sd_script_isset(frame, "bpn")) {
+            rstate->pal_entry_count = sd_script_get(frame, "bpn");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BPS)) {
-            rstate->pal_start_index = script_get_tag_value_by_id(frame, TAG_BPS);
+        if(sd_script_isset(frame, "bps")) {
+            rstate->pal_start_index = sd_script_get(frame, "bps");
         }
-        if(script_is_tag_set_by_id(frame, TAG_BPF)) {
+        if(sd_script_isset(frame, "bpf")) {
             // Exact values come from master.dat
             if(game_state_get_player(obj->gs, 0)->har_obj_id == obj->id) {
                 rstate->pal_start_index = 1;
@@ -635,57 +646,57 @@ void player_run_apply(object *obj) {
                 rstate->pal_entry_count = 48;
             }
         }
-        if(script_is_tag_set_by_id(frame, TAG_BPP)) {
-            rstate->pal_end = COLOR_6TO8(script_get_tag_value_by_id(frame, TAG_BPP));
-            rstate->pal_begin = COLOR_6TO8(script_get_tag_value_by_id(frame, TAG_BPP));
+        if(sd_script_isset(frame, "bpp")) {
+            rstate->pal_end = COLOR_6TO8(sd_script_get(frame, "bpp"));
+            rstate->pal_begin = COLOR_6TO8(sd_script_get(frame, "bpp"));
         }
-        if(script_is_tag_set_by_id(frame, TAG_BPB)) {
-            rstate->pal_begin = COLOR_6TO8(script_get_tag_value_by_id(frame, TAG_BPB));
+        if(sd_script_isset(frame, "bpb")) {
+            rstate->pal_begin = COLOR_6TO8(sd_script_get(frame, "bpb"));
         }
-        if(script_is_tag_set_by_id(frame, TAG_BZ)) {
+        if(sd_script_isset(frame, "bz")) {
             rstate->pal_tint = 1;
         }
 
         // CREDITS palette copy tricks
-        rstate->pal_tricks_off = script_is_tag_set_by_id(frame, TAG_BPO) ? 1 : 0; // Disable the standard palette tricks
-        rstate->bd_flag = script_is_tag_set_by_id(
-            frame, TAG_BD); // Read palette from the last frame of animation (we emulate this internally)
+        rstate->pal_tricks_off = sd_script_isset(frame, "bpo") ? 1 : 0; // Disable the standard palette tricks
+        rstate->bd_flag =
+            sd_script_isset(frame, "bd"); // Read palette from the last frame of animation (we emulate this internally)
 
         // These are animation-global instead of per-frame.
-        if(script_is_tag_set_by_id(frame, TAG_BA)) {
-            state->pal_copy_count = script_get_tag_value_by_id(frame, TAG_BA); // Number of copies to make after bi + bc
-            state->pal_copy_start = script_get_tag_value_by_id(frame, TAG_BI); // Start offset for copying
-            state->pal_copy_entries = script_get_tag_value_by_id(frame, TAG_BC); // Number of indexes to copy
+        if(sd_script_isset(frame, "ba")) {
+            state->pal_copy_count = sd_script_get(frame, "ba");   // Number of copies to make after bi + bc
+            state->pal_copy_start = sd_script_get(frame, "bi");   // Start offset for copying
+            state->pal_copy_entries = sd_script_get(frame, "bc"); // Number of indexes to copy
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_BY)) {
+        if(sd_script_isset(frame, "by")) {
             object_set_shadow(obj, 0);
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_BW)) {
+        if(sd_script_isset(frame, "bw")) {
             object_set_shadow(obj, 1);
         }
 
         // Handle position correction
-        if(script_is_tag_set_by_id(frame, TAG_OX)) {
-            log_debug("O_CORRECTION: X = %d", script_get_tag_value_by_id(frame, TAG_OX));
-            rstate->o_correction.x = script_get_tag_value_by_id(frame, TAG_OX);
+        if(sd_script_isset(frame, "ox")) {
+            log_debug("O_CORRECTION: X = %d", sd_script_get(frame, "ox"));
+            rstate->o_correction.x = sd_script_get(frame, "ox");
         } else {
             rstate->o_correction.x = 0;
         }
-        if(script_is_tag_set_by_id(frame, TAG_OY)) {
-            log_debug("O_CORRECTION: Y = %d", script_get_tag_value_by_id(frame, TAG_OY));
-            rstate->o_correction.y = script_get_tag_value_by_id(frame, TAG_OY);
+        if(sd_script_isset(frame, "oy")) {
+            log_debug("O_CORRECTION: Y = %d", sd_script_get(frame, "oy"));
+            rstate->o_correction.y = sd_script_get(frame, "oy");
         } else {
             rstate->o_correction.y = 0;
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_BO)) {
-            player_set_shadow_correction_y(obj, script_get_tag_value_by_id(frame, TAG_BO));
+        if(sd_script_isset(frame, "bo")) {
+            player_set_shadow_correction_y(obj, sd_script_get(frame, "bo"));
         }
 
         // If UA is set, force other HAR to damage animation
-        if(script_is_tag_set_by_id(frame, TAG_UA) && enemy) {
+        if(sd_script_isset(frame, "ua") && enemy) {
             har *h = object_get_userdata(obj);
             if(enemy->cur_animation->id != ANIM_DAMAGE) {
                 har *eh = object_get_userdata(enemy);
@@ -696,29 +707,29 @@ void player_run_apply(object *obj) {
             object_set_custom_string(enemy, str_c(&move->footer_string));
             object_set_repeat(enemy, 0);
             object_set_stride(enemy, 1);
-            script_reader_seek(&enemy->animation_state.reader, script_reader_tick(&obj->animation_state.reader));
+            enemy->animation_state.current_tick = obj->animation_state.current_tick;
         }
 
         // handle scaling on the Y axis
-        if(script_is_tag_set_by_id(frame, TAG_Y)) {
-            obj->y_percent = script_get_tag_value_by_id(frame, TAG_Y) / 100.0f;
+        if(sd_script_isset(frame, "y")) {
+            obj->y_percent = sd_script_get(frame, "y") / 100.0f;
         }
 
         // Handle slides
-        if(script_is_tag_set_by_id(frame, TAG_X_EQ) || script_is_tag_set_by_id(frame, TAG_Y_EQ)) {
+        if(sd_script_isset(frame, "x=") || sd_script_isset(frame, "y=")) {
             obj->vel = vec2f_create(0, 0);
         }
-        if(script_is_tag_set_by_id(frame, TAG_X_EQ)) {
-            obj->pos.x = obj->start.x + (script_get_tag_value_by_id(frame, TAG_X_EQ) * object_get_direction(obj));
+        if(sd_script_isset(frame, "x=")) {
+            obj->pos.x = obj->start.x + (sd_script_get(frame, "x=") * object_get_direction(obj));
 
             // Find frame ID by tick
-            int frame_id = script_get_next_frame_with_tag_id(script, TAG_X_EQ, script_reader_tick(&state->reader));
+            int frame_id = sd_script_next_frame_with_tag(&state->parser, "x=", state->current_tick);
 
             // Handle it!
             if(frame_id >= 0) {
-                int mr = script_get_tick_pos_at_frame(script, frame_id);
-                int r = mr - script_reader_tick(&state->reader) - frame->tick_len;
-                int next_x = script_get_tag_value_by_id(script_get_frame(script, frame_id), TAG_X_EQ);
+                int mr = sd_script_get_tick_pos_at_frame(&state->parser, frame_id);
+                int r = mr - state->current_tick - frame->tick_len;
+                int next_x = sd_script_get(sd_script_get_frame(&state->parser, frame_id), "x=");
                 int slide = obj->start.x + (next_x * object_get_direction(obj));
                 if(slide != obj->pos.x) {
                     obj->slide_state.vel.x = dist(obj->pos.x, slide) / (float)(frame->tick_len + r);
@@ -732,17 +743,17 @@ void player_run_apply(object *obj) {
                 }
             }
         }
-        if(script_is_tag_set_by_id(frame, TAG_Y_EQ)) {
-            obj->pos.y = obj->start.y + script_get_tag_value_by_id(frame, TAG_Y_EQ);
+        if(sd_script_isset(frame, "y=")) {
+            obj->pos.y = obj->start.y + sd_script_get(frame, "y=");
 
             // Find frame ID by tick
-            int frame_id = script_get_next_frame_with_tag_id(script, TAG_Y_EQ, script_reader_tick(&state->reader));
+            int frame_id = sd_script_next_frame_with_tag(&state->parser, "y=", state->current_tick);
 
             // handle it!
             if(frame_id >= 0) {
-                int mr = script_get_tick_pos_at_frame(script, frame_id);
-                int r = mr - script_reader_tick(&state->reader) - frame->tick_len;
-                int next_y = script_get_tag_value_by_id(script_get_frame(script, frame_id), TAG_Y_EQ);
+                int mr = sd_script_get_tick_pos_at_frame(&state->parser, frame_id);
+                int r = mr - state->current_tick - frame->tick_len;
+                int next_y = sd_script_get(sd_script_get_frame(&state->parser, frame_id), "y=");
                 int slide = next_y + obj->start.y;
                 if(slide != obj->pos.y) {
                     obj->slide_state.vel.y = dist(obj->pos.y, slide) / (float)(frame->tick_len + r);
@@ -757,8 +768,8 @@ void player_run_apply(object *obj) {
             }
         }
 
-        if(script_is_tag_set_by_id(frame, TAG_Q)) {
-            obj->q_val = script_get_tag_value_by_id(frame, TAG_Q);
+        if(sd_script_isset(frame, "q")) {
+            obj->q_val = sd_script_get(frame, "q");
             // Enable hit if the q value is higher than the hit count for this animation
             if(obj->q_val > obj->q_counter) {
                 obj->can_hit = 1;
@@ -767,16 +778,16 @@ void player_run_apply(object *obj) {
 
         // Set video effects now.
         int effects = EFFECT_NONE;
-        if(script_is_tag_set_by_id(frame, TAG_BT)) {
+        if(player_frame_isset(obj, "bt")) {
             effects |= EFFECT_DARK_TINT;
         }
-        if(script_is_tag_set_by_id(frame, TAG_BR)) {
+        if(player_frame_isset(obj, "br")) {
             effects |= EFFECT_GLOW;
         }
-        if(script_is_tag_set_by_id(frame, TAG_UB)) {
+        if(player_frame_isset(obj, "ub")) {
             effects |= EFFECT_TRAIL;
         }
-        if(script_is_tag_set_by_id(frame, TAG_BG)) {
+        if(player_frame_isset(obj, "bg")) {
             effects |= EFFECT_ADD;
         }
         object_set_frame_effects(obj, effects);
@@ -785,17 +796,17 @@ void player_run_apply(object *obj) {
         object_select_sprite(obj, frame->sprite);
         if(obj->cur_sprite_id >= 0) {
             rstate->duration = frame->tick_len;
-            if(script_is_tag_set_by_id(frame, TAG_R)) { // || obj->animation_state.shadow_corner_hack) {
+            if(sd_script_isset(frame, "r")) { // || obj->animation_state.shadow_corner_hack) {
                 rstate->flipmode ^= FLIP_HORIZONTAL;
             }
-            if(script_is_tag_set_by_id(frame, TAG_F)) {
+            if(sd_script_isset(frame, "f")) {
                 rstate->flipmode ^= FLIP_VERTICAL;
             }
         }
     }
 
     // Orb meandering.  Only the fire pit orb should have this tag set.
-    if(script_is_tag_set_by_id(frame, TAG_AS)) {
+    if(sd_script_isset(frame, "as")) {
         double base_val = (obj->orb_val & 7) + 8.f;
         double delta_1 = abs(obj->orb_val * 4) + obj->gs->tick;
         double delta_2 = abs(obj->orb_val * 2) + obj->gs->tick;
@@ -809,7 +820,7 @@ void player_run_apply(object *obj) {
         obj->vel.y = 0;
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_BU)) {
+    if(sd_script_isset(frame, "bu")) {
         if(obj->vel.y < 0.0f) {
             float x_dist = dist(obj->pos.x, 160);
             // assume that bu is used in conjunction with 'vy-X' and that we want to land in the center of the arena
@@ -820,7 +831,7 @@ void player_run_apply(object *obj) {
         }
     }
 
-    if(script_is_tag_set_by_id(frame, TAG_CG)) {
+    if(sd_script_isset(frame, "cg")) {
         obj->animation_state.disable_d = obj->pos.y < ARENA_FLOOR ? 1 : 0;
 
         if(obj->pos.y >= ARENA_FLOOR) {
@@ -831,35 +842,44 @@ void player_run_apply(object *obj) {
         }
     }
 
-    // Sprite ticks. Frames with a 'd' redirect never accumulate sprite
-    // display time; the redirect itself is handled on the next advance.
-    if(!(script_is_tag_set_by_id(frame, TAG_D) && !state->disable_d)) {
-        rstate->timer++;
+    // Tick management
+    if(sd_script_isset(frame, "d") && !obj->animation_state.disable_d) {
+        state->previous_tick = state->current_tick;
+        int tick_value = sd_script_get(frame, "d");
+        if(tick_value >= 0) {
+            state->current_tick = tick_value + 1;
+            state->looping = true;
+        } else {
+            tick_value = sd_script_get_total_ticks(&state->parser) + tick_value;
+            state->current_tick = tick_value;
+        }
+        return;
     }
-}
 
-void player_run(object *obj) {
-    player_run_advance(obj);
-    if(obj->animation_state.pending_apply) {
-        player_run_apply(obj);
+    // Animation ticks
+    state->previous_tick = state->current_tick;
+    if(state->reverse) {
+        state->current_tick--;
+    } else {
+        state->current_tick++;
     }
+
+    // Sprite ticks
+    rstate->timer++;
+
+    // All done.
+    return;
 }
 
 void player_jump_to_tick(object *obj, int tick) {
     player_animation_state *state = &obj->animation_state;
-    script_reader_mark_previous(&state->reader);
-    script_reader_seek(&state->reader, tick);
-}
-
-void player_init_spawned(object *obj) {
-    // Spawned objects skip tick 0 (first tick at +1).
-    obj->animation_state.from_spawn = true;
-    script_reader_reset(&obj->animation_state.reader);
-    script_reader_seek(&obj->animation_state.reader, 1);
+    state->previous_tick = state->current_tick;
+    state->current_tick = tick;
 }
 
 unsigned int player_get_len_ticks(const object *obj) {
-    return script_get_total_ticks(script_reader_get_script(&obj->animation_state.reader));
+    const player_animation_state *state = &obj->animation_state;
+    return sd_script_get_total_ticks(&state->parser);
 }
 
 void player_set_repeat(object *obj, int repeat) {
@@ -872,31 +892,28 @@ int player_get_repeat(const object *obj) {
 
 void player_next_frame(object *obj) {
     player_animation_state *state = &obj->animation_state;
-    int current_index =
-        script_get_frame_index_at(script_reader_get_script(&state->reader), script_reader_tick(&state->reader));
-    script_reader_seek(&state->reader,
-                       script_get_tick_pos_at_frame(script_reader_get_script(&state->reader), current_index + 1));
-    script_reader_mark_entered(&state->reader);
+    int current_index = sd_script_get_frame_index_at(&state->parser, state->current_tick);
+    state->current_tick = sd_script_get_tick_pos_at_frame(&state->parser, current_index + 1);
+    state->previous_tick = state->current_tick - 1;
 }
 
 void player_goto_frame(object *obj, int frame_id) {
     player_animation_state *state = &obj->animation_state;
-    script_reader_seek(&state->reader,
-                       script_get_tick_pos_at_frame(script_reader_get_script(&state->reader), frame_id));
-    script_reader_mark_entered(&state->reader);
+    state->current_tick = sd_script_get_tick_pos_at_frame(&state->parser, frame_id);
+    state->previous_tick = state->current_tick - 1;
 }
 
 uint32_t player_get_current_tick(const object *obj) {
-    return script_reader_tick(&obj->animation_state.reader);
+    return obj->animation_state.current_tick;
 }
 
 int player_get_last_frame(const object *obj) {
-    const script *s = script_reader_get_script(&obj->animation_state.reader);
-    return script_get_frame_at(s, script_get_total_ticks(s) - 1)->sprite;
+    const player_animation_state *state = &obj->animation_state;
+    return sd_script_get_frame_at(&state->parser, sd_script_get_total_ticks(&state->parser) - 1)->sprite;
 }
 
 char player_get_last_frame_letter(const object *obj) {
-    return script_frame_to_letter(player_get_last_frame(obj));
+    return sd_script_frame_to_letter(player_get_last_frame(obj));
 }
 
 bool player_is_looping(const object *obj) {

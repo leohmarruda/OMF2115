@@ -33,7 +33,6 @@
 #include "game/utils/settings.h"
 #include "game/utils/ticktimer.h"
 #include "resources/languages.h"
-#include "resources/script_cache.h"
 #include "resources/sgmanager.h"
 #include "utils/allocator.h"
 #include "utils/log.h"
@@ -104,6 +103,11 @@ typedef struct arena_local {
     int rounds;
     int over;
     int winner;
+#ifdef OMF3K_SOURCE_TRACE
+    int omf3k_hit_mask;
+    int omf3k_block_mask;
+    int omf3k_round_winner_plus_one;
+#endif
     bool tournament;
     win_state win_state;
 
@@ -194,13 +198,13 @@ void scene_ready_anim_done(object *parent) {
 
     // Custom object finisher callback requires that we
     // mark object as finished manually, if necessary.
-    object_set_finished(parent, true);
+    object_set_finished(parent);
 }
 
 void scene_youwin_anim_done(object *parent) {
     // Custom object finisher callback requires that we
     // mark object as finished manually, if necessary.
-    object_set_finished(parent, true);
+    object_set_finished(parent);
     arena_local *local = scene_get_userdata(parent->gs->sc);
     local->win_state = DONE;
 }
@@ -221,7 +225,7 @@ void scene_youwin_anim_start(void *userdata) {
 void scene_youlose_anim_done(object *parent) {
     // Custom object finisher callback requires that we
     // mark object as finished manually, if necessary.
-    object_set_finished(parent, true);
+    object_set_finished(parent);
     arena_local *local = scene_get_userdata(parent->gs->sc);
     local->win_state = DONE;
 }
@@ -255,6 +259,12 @@ void arena_screengrab_winner(scene *sc) {
 
 static void arena_end(scene *sc) {
     game_state *gs = sc->gs;
+    if(gs->init_flags->omf3k_live) {
+        // The live 3D view owns the post-match choice; stay on the final pose until
+        // it requests a rematch (arena_restart) or closes, instead of leaving for
+        // the newsroom and dropping the state link.
+        return;
+    }
     arena_local *local = scene_get_userdata(sc);
     const scene *scene = game_state_get_scene(gs);
     fight_stats *fight_stats = &gs->fight_stats;
@@ -383,7 +393,7 @@ static void arena_end(scene *sc) {
         }
 
         if(p1->chr && sg_save(p1->chr) != SD_SUCCESS) {
-            log_error("Failed to save pilot %s", str_c(&p1->chr->pilot.name));
+            log_error("Failed to save pilot %s", p1->chr->pilot.name);
         }
         if(is_demoplay(gs)) {
             game_state_set_next(gs, SCENE_VS);
@@ -497,6 +507,31 @@ void arena_reset(scene *sc) {
     }
 }
 
+void arena_restart(scene *sc) {
+    arena_local *local = scene_get_userdata(sc);
+
+    local->round = 0;
+    local->over = 0;
+    local->winner = 0;
+    local->win_state = NONE;
+    memset(local->player_rounds, 0, sizeof(local->player_rounds));
+#ifdef OMF3K_SOURCE_TRACE
+    local->omf3k_hit_mask = 0;
+    local->omf3k_block_mask = 0;
+    local->omf3k_round_winner_plus_one = 0;
+#endif
+    memset(&sc->gs->fight_stats, 0, sizeof(sc->gs->fight_stats));
+
+    for(int i = 0; i < 2; i++) {
+        game_player *player = game_state_get_player(sc->gs, i);
+        chr_score_reset(game_player_get_score(player), true);
+        chr_score_reset_wins(game_player_get_score(player));
+        har_screencaps_reset(&player->screencaps);
+    }
+
+    arena_reset(sc);
+}
+
 int arena_is_over(scene *sc) {
     arena_local *local = scene_get_userdata(sc);
 
@@ -506,6 +541,18 @@ int arena_is_over(scene *sc) {
 
     return -1;
 }
+
+#ifdef OMF3K_SOURCE_TRACE
+void arena_take_omf3k_events(scene *sc, int *hit_mask, int *block_mask, int *round_winner) {
+    arena_local *local = scene_get_userdata(sc);
+    *hit_mask = local->omf3k_hit_mask;
+    *block_mask = local->omf3k_block_mask;
+    *round_winner = local->omf3k_round_winner_plus_one - 1;
+    local->omf3k_hit_mask = 0;
+    local->omf3k_block_mask = 0;
+    local->omf3k_round_winner_plus_one = 0;
+}
+#endif
 
 void arena_har_take_hit_hook(int hittee, af_move *move, scene *scene) {
     chr_score *score;
@@ -563,7 +610,7 @@ bool can_wallslam(int player_id, scene *scene) {
     object *o_har2 =
         game_state_find_object(scene->gs, game_player_get_har_obj_id(game_state_get_player(scene->gs, !player_id)));
 
-    if(player_frame_isset(o_har2, TAG_CW)) {
+    if(player_frame_isset(o_har2, "cw")) {
         return true;
     }
 
@@ -594,7 +641,7 @@ void arena_har_hit_wall_hook(int player_id, int wall, scene *scene) {
     }
 
     float abs_velocity_h = fabsf(o_har->vel.x) / o_har->horizontal_velocity_modifier;
-    if(player_frame_isset(o_har2, TAG_CW)) {
+    if(player_frame_isset(o_har2, "cw")) {
         abs_velocity_h = 7;
     }
 
@@ -615,7 +662,6 @@ void arena_har_hit_wall_hook(int player_id, int wall, scene *scene) {
                 object_create(obj, scene->gs, info->ani.start_pos, vec2f_create(0, 0));
                 object_set_stl(obj, scene->bk_data->sound_translation_table);
                 object_set_animation(obj, &info->ani);
-                player_init_spawned(obj);
                 if(game_state_add_object(scene->gs, obj, RENDER_LAYER_BOTTOM, 1, 0) != 0) {
                     object_free(obj);
                     omf_free(obj);
@@ -631,7 +677,7 @@ void arena_har_hit_wall_hook(int player_id, int wall, scene *scene) {
                 object_set_stl(obj2, scene->bk_data->sound_translation_table);
                 object_set_animation(obj2, &info->ani);
                 object_attach_to(obj2, o_har);
-                player_init_spawned(obj2);
+                // object_dynamic_tick(obj2);
                 if(game_state_add_object(scene->gs, obj2, RENDER_LAYER_TOP, 0, 0)) {
                     object_free(obj2);
                     omf_free(obj2);
@@ -649,7 +695,6 @@ void arena_har_hit_wall_hook(int player_id, int wall, scene *scene) {
                 object_create(dust, scene->gs, coord, vec2f_create(0, 0));
                 object_set_stl(dust, scene->bk_data->sound_translation_table);
                 object_set_animation(dust, &bk_get_info(scene->bk_data, anim_no)->ani);
-                player_init_spawned(dust);
                 game_state_add_object(scene->gs, dust, RENDER_LAYER_MIDDLE, 0, 0);
             }
 
@@ -683,7 +728,6 @@ void arena_har_hit_wall_hook(int player_id, int wall, scene *scene) {
                 object_set_animation(obj, &info->ani);
                 // TODO: Adjust this animation based on velocity
                 object_set_custom_string(obj, "brwA1-brwB1-brwD1-brwE0-brwD4-brwC2-brwB2-brwA2");
-                player_init_spawned(obj);
                 if(game_state_add_object(scene->gs, obj, RENDER_LAYER_BOTTOM, 1, 0) != 0) {
                     object_free(obj);
                     omf_free(obj);
@@ -732,6 +776,9 @@ void arena_har_defeat_hook(int loser_player_id, scene *scene) {
         object_set_sprite_override(round_token, 1);
     }
     score->rounds++;
+#ifdef OMF3K_SOURCE_TRACE
+    local->omf3k_round_winner_plus_one = winner_player_id + 1;
+#endif
     if(player_winner->ctrl->type != CTRL_TYPE_AI && player_loser->ctrl->type == CTRL_TYPE_AI) {
         chr_score_victory(score, har_health_percent(winner_har));
     }
@@ -768,6 +815,17 @@ void arena_har_hook(har_event event, void *data) {
     object *obj_har1 = game_state_find_object(
         scene->gs, game_player_get_har_obj_id(game_state_get_player(scene->gs, event.player_id)));
     har *har1 = obj_har1->userdata;
+#ifdef OMF3K_SOURCE_TRACE
+    if(event.player_id >= 0 && event.player_id < 2) {
+        int bit = 1 << event.player_id;
+        if(event.type == HAR_EVENT_TAKE_HIT || event.type == HAR_EVENT_TAKE_HIT_PROJECTILE ||
+           event.type == HAR_EVENT_HAZARD_HIT) {
+            arena->omf3k_hit_mask |= bit;
+        } else if(event.type == HAR_EVENT_BLOCK || event.type == HAR_EVENT_BLOCK_PROJECTILE) {
+            arena->omf3k_block_mask |= bit;
+        }
+    }
+#endif
     switch(event.type) {
         case HAR_EVENT_WALK:
         case HAR_EVENT_AIR_TURN:
@@ -1021,9 +1079,8 @@ int arena_handle_events(scene *scene, game_player *player, ctrl_event *i) {
                             net_controller_set_winner(game_state_get_player(scene->gs, 1)->ctrl, local->winner);
                         }
                         game_state_set_next(scene->gs, SCENE_LOBBY);
-                    } else {
-                        game_state_set_next(scene->gs, SCENE_MENU);
                     }
+                    game_state_set_next(scene->gs, SCENE_MENU);
                 }
                 return 0;
             }
@@ -1056,7 +1113,6 @@ void arena_spawn_hazard(scene *scene) {
                 /*object_set_spawn_cb(obj, cb_scene_spawn_object, (void*)scene);*/
                 /*object_set_destroy_cb(obj, cb_scene_destroy_object, (void*)scene);*/
                 hazard_create(obj, scene);
-                player_init_spawned(obj);
                 if(game_state_add_object(scene->gs, obj, RENDER_LAYER_BOTTOM, 1, 0) == 0) {
                     object_set_layers(obj, LAYER_HAZARD | LAYER_HAR);
                     object_set_group(obj, GROUP_HAZARD);
@@ -1073,8 +1129,7 @@ void arena_spawn_hazard(scene *scene) {
                         }
                     }
 
-                    log_debug("Arena tick: Hazard with probability %u started (anim id %d).", info->probability,
-                              info->ani.id);
+                    log_debug("Arena tick: Hazard with probability %d started.", info->probability, info->ani.id);
                 } else {
                     object_free(obj);
                     omf_free(obj);
@@ -1303,7 +1358,7 @@ void arena_dynamic_tick(scene *scene, int paused) {
         } else if(local->state == ARENA_STATE_STARTING) {
             if(local->state_ticks == ARENA_CROSSFADE_TICKS) {
                 arena_create_roundstart_anim(scene);
-            } else if(local->state_ticks == 90) {
+            } else if(local->state_ticks == 92) {
                 // release the HARs for action
                 local->state = ARENA_STATE_FIGHTING;
                 local->state_ticks = 0;
@@ -1330,7 +1385,7 @@ void arena_dynamic_tick(scene *scene, int paused) {
                 local->win_state = NONE;
             } else if(local->win_state == DONE) {
                 // you win/lose animation is done
-                if(player_frame_isset(obj_har[0], TAG_BE) || player_frame_isset(obj_har[1], TAG_BE) ||
+                if(player_frame_isset(obj_har[0], "be") || player_frame_isset(obj_har[1], "be") ||
                    chr_score_onscreen(s1) || chr_score_onscreen(s2) || har_is_scrap_walking(obj_har[0]) ||
                    har_is_scrap_walking(obj_har[1])) {
                     local->state_ticks = 50;
@@ -1386,14 +1441,18 @@ void arena_dynamic_tick(scene *scene, int paused) {
                     object_set_layers(scrap, LAYER_SCRAP);
                     object_set_shadow(scrap, 1);
                     object_set_group(scrap, GROUP_SCRAP);
+                    object_dynamic_tick(scrap);
                     scrap_create(scrap);
-                    player_init_spawned(scrap);
                     game_state_add_object(gs, scrap, RENDER_LAYER_TOP, 0, 0);
                 }
             }
         }
 
         // check some invariants
+        assert(player_frame_isset(obj_har[0], "ab") ||
+               (obj_har[0]->pos.x >= ARENA_LEFT_WALL && obj_har[0]->pos.x <= ARENA_RIGHT_WALL));
+        assert(player_frame_isset(obj_har[1], "ab") ||
+               (obj_har[1]->pos.x >= ARENA_LEFT_WALL && obj_har[1]->pos.x <= ARENA_RIGHT_WALL));
         if(hars[0]->health == 0) {
             assert(hars[0]->state == STATE_DEFEAT || hars[0]->state == STATE_RECOIL || hars[0]->state == STATE_NONE ||
                    hars[0]->state == STATE_WALLDAMAGE);
@@ -1447,14 +1506,14 @@ void arena_input_tick(scene *scene) {
             game_state_set_paused(scene->gs, local->menu_visible);
         } else if(i->type == EVENT_TYPE_ACTION && local->menu_visible && i->event_data.action != ACT_ESC) {
             // menu events
-            gui_frame_action(local->game_menu, i->event_data.action, i->source);
+            gui_frame_action(local->game_menu, i->event_data.action);
         }
     }
     controller_free_chain(menu_ev);
 }
 
-bool arena_event(scene *scene, SDL_Event *e) {
-    return false;
+int arena_event(scene *scene, SDL_Event *e) {
+    return 0;
 }
 
 void arena_render_overlay(scene *scene) {
@@ -1510,6 +1569,7 @@ void arena_render_overlay(scene *scene) {
     if(local->menu_visible) {
         gui_frame_render(local->game_menu);
     }
+
 }
 
 static void arena_tick_debug(scene *scene) {
@@ -1705,11 +1765,11 @@ void arena_clone_free(scene *scene) {
 }
 
 int arena_create(scene *scene) {
-    // Free up the script cache here, since we know that we don't share animations over the arena start.
-    script_cache_clear();
+    settings *setting;
+    arena_local *local;
 
     // Load up settings
-    settings *setting = settings_get();
+    setting = settings_get();
 
     fight_stats *fight_stats = &scene->gs->fight_stats;
     memset(fight_stats, 0, sizeof(*fight_stats));
@@ -1734,7 +1794,7 @@ int arena_create(scene *scene) {
     }
 
     // Initialize local struct
-    arena_local *local = omf_calloc(1, sizeof(arena_local));
+    local = omf_calloc(1, sizeof(arena_local));
     scene_set_userdata(scene, local);
 
     // Set correct state
@@ -1842,13 +1902,13 @@ int arena_create(scene *scene) {
                 portrait->cur_sprite_id = 0;
                 game_state_add_object(scene->gs, portrait, RENDER_LAYER_TOP, 0, 0);
             } else {
-                object_create(portrait, scene->gs, vec2i_create(213, 5), vec2f_create(0, 0));
+                object_create(portrait, scene->gs, vec2i_create(235, 5), vec2f_create(0, 0));
                 sprite *sp = omf_calloc(1, sizeof(sprite));
                 sprite_create(sp, player->pilot->photo, -1);
                 portrait->x_percent = 0.70f;
                 portrait->y_percent = 0.70f;
                 object_set_sprite_override(portrait, 1);
-                object_set_animation(portrait, create_animation_from_single(sp, vec2i_create(213, 0)));
+                object_set_animation(portrait, create_animation_from_single(sp, vec2i_create(235, 0)));
                 object_set_direction(portrait, OBJECT_FACE_LEFT);
                 object_set_animation_owner(portrait, OWNER_OBJECT);
                 portrait->cur_sprite_id = 0;

@@ -106,19 +106,14 @@ void dialog_tick(dialog *dlg) {
     gui_frame_tick(dlg->frame);
 }
 
-void dialog_event(dialog *dlg, int action, int source) {
+void dialog_event(dialog *dlg, int action) {
     if(!dlg->visible) {
         return;
     }
 
-    // Check for esc first. There is no reason to trigger the
-    // frame action handler at all if we know we are going to cancel.
-    if(action == ACT_ESC) {
-        if(dlg->clicked) {
-            dlg->clicked(dlg, DIALOG_RESULT_CANCEL);
-        }
-        return;
-    }
+    gui_frame_action(dlg->frame, action);
 
-    gui_frame_action(dlg->frame, action, source);
+    if(action == ACT_ESC && dlg->clicked) {
+        dlg->clicked(dlg, DIALOG_RESULT_CANCEL);
+    }
 }

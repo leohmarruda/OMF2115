@@ -6,7 +6,8 @@
 #include "game/utils/settings.h"
 
 void menu_netconfig_done(component *c, void *u) {
-    menu_finish(component_get_parent(c));
+    menu *m = sizer_get_obj(c->parent);
+    m->finished = 1;
 }
 
 component *menu_netconfig_create(scene *s) {

@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "audio/audio.h"
 #include "controller/controller.h"
@@ -11,6 +12,7 @@
 typedef struct text_slider {
     text *text;
     str title;
+    int ticks;
     int pos_;
     int *pos;
     int has_off;
@@ -54,11 +56,10 @@ static void textslider_render(component *c) {
     } else {
         text_set_color(t->text, theme->text.inactive_color);
     }
-    const vec2i pos = component_get_pos(c);
-    text_draw(t->text, pos.x, pos.y);
+    text_draw(t->text, c->x, c->y);
 }
 
-static bool textslider_action(component *c, int action, int source) {
+static int textslider_action(component *c, int action) {
     text_slider *t = widget_get_obj(c);
     int old_pos = *t->pos;
     int panning = t->disable_panning ? 0 : 50;
@@ -81,9 +82,16 @@ static bool textslider_action(component *c, int action, int source) {
         if(t->slide) {
             t->slide(c, t->userdata, *t->pos);
         }
-        return true;
+        // reset ticks so text is bright
+        t->ticks = 0;
+        return 0;
     }
-    return false;
+    return 1;
+}
+
+static void textslider_tick(component *c) {
+    text_slider *t = widget_get_obj(c);
+    t->ticks++;
 }
 
 static void textslider_free(component *c) {
@@ -97,8 +105,7 @@ static void textslider_init(component *c, const gui_theme *theme) {
     text_slider *t = widget_get_obj(c);
     refresh(c);
     text_set_font(t->text, t->override_font != FONT_NONE ? t->override_font : theme->text.font);
-    const vec2i hint = component_get_size_hint(c);
-    if(hint.x < 0 && hint.y < 0) {
+    if(c->w_hint < 0 && c->h_hint < 0) {
         text_generate_layout(t->text);
         int text_width = text_get_layout_width(t->text);
         int text_height = text_get_layout_height(t->text);
@@ -120,6 +127,7 @@ component *textslider_create(const char *text, const char *help, unsigned int po
 
     text_slider *t = omf_calloc(1, sizeof(text_slider));
     t->text = text_create();
+    t->ticks = 0;
     t->pos_ = 1;
     t->pos = &t->pos_;
     t->has_off = has_off;
@@ -136,6 +144,7 @@ component *textslider_create(const char *text, const char *help, unsigned int po
 
     widget_set_render_cb(c, textslider_render);
     widget_set_action_cb(c, textslider_action);
+    widget_set_tick_cb(c, textslider_tick);
     widget_set_free_cb(c, textslider_free);
     widget_set_init_cb(c, textslider_init);
     widget_set_layout_cb(c, textslider_layout);

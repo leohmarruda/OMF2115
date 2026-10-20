@@ -12,7 +12,6 @@
 #ifndef STR_H
 #define STR_H
 
-#include "utils/compat.h"
 #include "utils/vector.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -85,7 +84,7 @@ bool str_from_file(str *dst, const path *file_path);
  * @param format Format string
  * @param ... Arguments list
  */
-void str_from_format(str *dst, const char *format, ...) ATTR_FORMAT_PRINTF(2, 3);
+void str_from_format(str *dst, const char *format, ...);
 
 /**
  * @brief Create a string object from range slice
@@ -106,7 +105,7 @@ void str_from_slice(str *dst, const str *src, size_t start, size_t end);
  * @param ... Arguments list
  */
 
-void str_format(str *dst, const char *format, ...) ATTR_FORMAT_PRINTF(2, 3);
+void str_format(str *dst, const char *format, ...);
 
 /**
  * @brief Cut away amount of characters from the end of the string.
@@ -205,7 +204,7 @@ static inline void str_append_char(str *dst, char c) {
  * @brief Append the result of a format string to a string object.
  * @details
  */
-void str_append_format(str *dst, const char *format, ...) ATTR_FORMAT_PRINTF(2, 3);
+void str_append_format(str *dst, const char *format, ...);
 
 /**
  * @brief Replace content in string with something else.

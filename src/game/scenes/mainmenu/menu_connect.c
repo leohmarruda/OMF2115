@@ -50,7 +50,7 @@ void menu_connect_free(component *c) {
 
 void menu_connect_start(component *c, void *userdata) {
     scene *s = userdata;
-    connect_menu_data *local = menu_get_userdata(component_get_parent(c));
+    connect_menu_data *local = menu_get_userdata(c->parent);
     ENetAddress address;
     const char *addr = textinput_value(local->addr_input);
     s->gs->role = ROLE_CLIENT;
@@ -83,7 +83,7 @@ void menu_connect_start(component *c, void *userdata) {
     component_disable(local->connect_button, 1);
     component_disable(local->addr_input, 1);
     component_disable(local->port_input, 1);
-    menu_select(component_get_parent(c), local->cancel_button);
+    menu_select(c->parent, local->cancel_button);
 
     // Set address
     enet_address_set_host(&address, addr);
@@ -99,14 +99,15 @@ void menu_connect_start(component *c, void *userdata) {
 }
 
 void menu_connect_cancel(component *c, void *userdata) {
+    menu *m = sizer_get_obj(c->parent);
 
-    connect_menu_data *local = menu_get_userdata(component_get_parent(c));
+    connect_menu_data *local = menu_get_userdata(c->parent);
     if(local->connect_start && difftime(time(NULL), local->connect_start) < 0.1) {
         return;
     }
 
     // Finish menu
-    menu_finish(component_get_parent(c));
+    m->finished = 1;
 
     // Clean up host
     if(local->host && !local->controllers_created) {
@@ -205,14 +206,12 @@ component *menu_connect_create(scene *s) {
     local->controllers_created = 0;
     local->connect_start = 0;
 
-    local->addr_input = textinput_create(40, "Enter an IP address or hostname you wish to connect to.",
-                                         settings_get()->net.net_connect_ip);
-    local->port_input = textinput_create(highest_port_digits + 1, "Enter the remote port you wish to connect to.", "");
+    local->addr_input =
+        textinput_create(15, "Enter an IP address you wish to connect to.", settings_get()->net.net_connect_ip);
+    local->port_input = textinput_create(highest_port_digits, "Enter the remote port you wish to connect to.", "");
     textinput_set_font(local->addr_input, FONT_BIG);
     textinput_set_font(local->port_input, FONT_BIG);
     menu_connect_reset_port_input(local);
-    textinput_set_wheel_charset(local->addr_input, " 0123456789.-ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    textinput_set_wheel_charset(local->port_input, " 0123456789");
 
     local->connect_button =
         button_create("CONNECT", "Connect to the provided IP address.", false, false, menu_connect_start, s);

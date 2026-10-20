@@ -1,8 +1,11 @@
-#include "game/gui/spritebutton.h"
+#include <stdlib.h>
+
 #include "controller/controller.h"
+#include "game/gui/spritebutton.h"
 #include "game/gui/text/text.h"
 #include "game/gui/widget.h"
 #include "utils/allocator.h"
+#include "utils/log.h"
 #include "video/video.h"
 
 typedef struct spritebutton {
@@ -27,12 +30,11 @@ typedef struct spritebutton {
 static void spritebutton_render(component *c) {
     spritebutton *b = widget_get_obj(c);
     const gui_theme *theme = component_get_theme(c);
-    const vec2i pos = component_get_pos(c);
 
     if(component_is_disabled(c)) {
-        video_draw_offset(b->img, pos.x, pos.y, 5, 0x5F);
+        video_draw_offset(b->img, c->x, c->y, 5, 0x5F);
     } else if(b->active_ticks != 0) {
-        video_draw(b->img, pos.x, pos.y);
+        video_draw(b->img, c->x, c->y);
     }
 
     if(b->text != NULL) {
@@ -44,7 +46,7 @@ static void spritebutton_render(component *c) {
         } else if(b->active_ticks > 0) {
             text_set_color(b->text, theme->text.active_color);
         }
-        text_draw(b->text, pos.x, pos.y);
+        text_draw(b->text, c->x, c->y);
     }
 }
 
@@ -74,10 +76,10 @@ static void spritebutton_focus(component *c, bool focused) {
     }
 }
 
-static bool spritebutton_action(component *c, int action, int source) {
+static int spritebutton_action(component *c, int action) {
     spritebutton *b = widget_get_obj(c);
     if(component_is_disabled(c)) {
-        return false;
+        return 1;
     }
     if(action == ACT_KICK || action == ACT_PUNCH) {
         if(b->active_ticks >= 0) {
@@ -86,9 +88,9 @@ static bool spritebutton_action(component *c, int action, int source) {
         if(b->click_cb) {
             b->click_cb(c, b->userdata);
         }
-        return true;
+        return 0;
     }
-    return false;
+    return 1;
 }
 
 static void spritebutton_layout(component *c, int x, int y, int w, int h) {
@@ -110,7 +112,7 @@ component *spritebutton_create(const char *text, const surface *img, bool disabl
                                void *userdata) {
     component *c = widget_create();
     component_disable(c, disabled);
-    component_set_supported(c, true, true, true);
+    component_set_supports(c, true, true, true);
     component_set_size_hints(c, img->w, img->h);
 
     spritebutton *b = omf_calloc(1, sizeof(spritebutton));

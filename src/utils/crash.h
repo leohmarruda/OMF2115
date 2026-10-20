@@ -11,8 +11,6 @@
 #ifndef CRASH_H
 #define CRASH_H
 
-#include "utils/compat.h"
-
 // This is GNU specific
 #ifndef __COLD
 #define __COLD
@@ -24,8 +22,7 @@
  * @see crash
  * @see crash_with_args
  */
-_Noreturn void _crash(const char *function, const char *file, int line, const char *message, ...) __COLD
-    ATTR_FORMAT_PRINTF(4, 5);
+_Noreturn void _crash(const char *message, const char *function, const char *file, int line, ...) __COLD;
 
 /**
  * @brief Crash the program with a formatted error message.
@@ -34,7 +31,7 @@ _Noreturn void _crash(const char *function, const char *file, int line, const ch
  * @param message Printf-style format string
  * @param ... Format string arguments
  */
-#define crash_with_args(message, ...) _crash(__func__, __FILE__, __LINE__, message, __VA_ARGS__)
+#define crash_with_args(message, ...) _crash(message, __func__, __FILE__, __LINE__, __VA_ARGS__)
 
 /**
  * @brief Crash the program with an error message.
@@ -42,6 +39,6 @@ _Noreturn void _crash(const char *function, const char *file, int line, const ch
  *          the file name, line number, and function name.
  * @param message Error message string
  */
-#define crash(message) _crash(__func__, __FILE__, __LINE__, message)
+#define crash(message) _crash(message, __func__, __FILE__, __LINE__)
 
 #endif // CRASH_H

@@ -16,7 +16,8 @@ typedef struct {
 } video_menu_confirm_data;
 
 void video_confirm_ok_clicked(component *c, void *userdata) {
-    menu_finish(component_get_parent(c));
+    menu *m = sizer_get_obj(c->parent);
+    m->finished = 1;
 
     video_menu_confirm_data *local = userdata;
     *local->old_video_settings = settings_get()->video;
@@ -37,7 +38,8 @@ void video_confirm_cancel_clicked(component *c, void *userdata) {
     }
 
     // Finish the menu
-    menu_finish(component_get_parent(c));
+    menu *m = sizer_get_obj(c->parent);
+    m->finished = 1;
 }
 
 void menu_video_confirm_free(component *c) {

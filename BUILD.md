@@ -18,6 +18,14 @@ Required:
 On Windows, a `vcpkg` installation is required. In turn, `vcpkg` can be used in Manifest mode to pull the required dependencies.
 Replace `C:\vcpkg` with a directory of your choice, if needed.
 
+In the current Windows development environment, CMake is bundled with Visual Studio 2022 Build Tools and may not be on `PATH`:
+
+```
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+```
+
+Run builds from an x64 Visual Studio Developer Command Prompt (or call `VsDevCmd.bat -arch=x64` first) so the MSVC compiler environment is set up. If CMake reports that `build/CMakeCache.txt` belongs to a different checkout, configure a separate build directory rather than reusing that cache.
+
 ```
 git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat

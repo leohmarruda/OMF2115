@@ -78,18 +78,18 @@ void gui_frame_render(gui_frame *frame) {
     }
 }
 
-bool gui_frame_event(gui_frame *frame, SDL_Event *event) {
+int gui_frame_event(gui_frame *frame, SDL_Event *event) {
     if(frame->root_node) {
         return component_event(frame->root_node, event);
     }
-    return false;
+    return 1;
 }
 
-bool gui_frame_action(gui_frame *frame, int action, int source) {
+int gui_frame_action(gui_frame *frame, int action) {
     if(frame->root_node) {
-        return component_action(frame->root_node, action, source);
+        return component_action(frame->root_node, action);
     }
-    return false;
+    return 1;
 }
 
 void gui_frame_layout(gui_frame *frame) {

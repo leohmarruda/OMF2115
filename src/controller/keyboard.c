@@ -1,7 +1,10 @@
 #include "controller/keyboard.h"
 #include "utils/allocator.h"
 #include "utils/log.h"
+#include "../../omf3k/prototype/live_input.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 void keyboard_free(controller *ctrl) {
     keyboard *k = ctrl->data;
@@ -13,9 +16,65 @@ static inline void keyboard_cmd(controller *ctrl, int action, ctrl_event **ev) {
     controller_cmd(ctrl, action, ev);
 }
 
+static int omf3k_live_action(int received) {
+    const int allowed = ACT_KICK | ACT_PUNCH | ACT_UP | ACT_DOWN | ACT_LEFT | ACT_RIGHT;
+    if(received < 0 || (received & ~(allowed | ACT_STOP))) return ACT_STOP;
+    int action = received & allowed;
+    if((action & (ACT_LEFT | ACT_RIGHT)) == (ACT_LEFT | ACT_RIGHT))
+        action &= ~(ACT_LEFT | ACT_RIGHT);
+    if((action & (ACT_UP | ACT_DOWN)) == (ACT_UP | ACT_DOWN))
+        action &= ~(ACT_UP | ACT_DOWN);
+    return action ? action : ACT_STOP;
+}
+
 int keyboard_poll(controller *ctrl, ctrl_event **ev) {
     keyboard *k = ctrl->data;
     ctrl->current = 0;
+    if(ctrl->gs->init_flags->omf3k_live) {
+        int action = ACT_STOP;
+#ifdef _WIN32
+        static HANDLE input_mapping;
+        static Omf3kLiveInput *shared_input;
+        const char *map_name = getenv("OMF3K_INPUT_MAP");
+        if(map_name && *map_name) {
+            if(!shared_input) {
+                input_mapping = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, map_name);
+                if(input_mapping) shared_input = MapViewOfFile(input_mapping, FILE_MAP_ALL_ACCESS, 0, 0,
+                                                               sizeof(Omf3kLiveInput));
+                if(input_mapping && !shared_input) {
+                    CloseHandle(input_mapping);
+                    input_mapping = NULL;
+                }
+            }
+            if(shared_input) {
+                DWORD written_at = (DWORD)InterlockedCompareExchange(&shared_input->heartbeat_ms, 0, 0);
+                int received = (int)InterlockedCompareExchange(&shared_input->action, 0, 0);
+                if(GetTickCount() - written_at <= 1000) {
+                    action = omf3k_live_action(received);
+                }
+            }
+            keyboard_cmd(ctrl, action, ev);
+            ctrl->last = ctrl->current;
+            return 0;
+        }
+#endif
+        const char *input_path = getenv("OMF3K_INPUT_PATH");
+        if(input_path && *input_path) {
+            FILE *input = fopen(input_path, "r");
+            if(input) {
+                long long written_at;
+                int received;
+                if(fscanf(input, "%lld %d", &written_at, &received) == 2 &&
+                   llabs((long long)time(NULL) - written_at) <= 1) {
+                    action = omf3k_live_action(received);
+                }
+                fclose(input);
+            }
+        }
+        keyboard_cmd(ctrl, action, ev);
+        ctrl->last = ctrl->current;
+        return 0;
+    }
     const unsigned char *state = SDL_GetKeyboardState(NULL);
     int action = 0;
     if(state[k->keys->jump_left]) {

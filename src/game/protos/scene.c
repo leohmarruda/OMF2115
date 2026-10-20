@@ -176,11 +176,12 @@ void scene_startup(scene *scene, int id, int *m_load, int *m_repeat) {
     }
 }
 
-bool scene_event(scene *scene, SDL_Event *event) {
+// Return 0 if event was handled here
+int scene_event(scene *scene, SDL_Event *event) {
     if(scene->event != NULL) {
         return scene->event(scene, event);
     }
-    return false;
+    return 1;
 }
 
 void scene_render_overlay(scene *scene) {

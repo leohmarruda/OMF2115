@@ -13,8 +13,8 @@
 #include "game/gui/component.h"
 
 typedef void (*sizer_render_cb)(component *c);                             ///< Sizer render callback
-typedef bool (*sizer_event_cb)(component *c, SDL_Event *event);            ///< Sizer SDL event callback
-typedef bool (*sizer_action_cb)(component *c, int action, int source);     ///< Sizer action callback
+typedef int (*sizer_event_cb)(component *c, SDL_Event *event);             ///< Sizer SDL event callback
+typedef int (*sizer_action_cb)(component *c, int action);                  ///< Sizer action callback
 typedef void (*sizer_layout_cb)(component *c, int x, int y, int w, int h); ///< Sizer layout callback
 typedef void (*sizer_tick_cb)(component *c);                               ///< Sizer tick callback
 typedef void (*sizer_init_cb)(component *c, const gui_theme *theme);       ///< Sizer initialization callback
@@ -57,6 +57,20 @@ component *sizer_get(const component *c, int item);
  * @return Number of child components
  */
 int sizer_size(const component *c);
+
+/**
+ * @brief Get the sizer's opacity
+ * @param c Sizer component to query
+ * @return Opacity value (0.0 to 1.0)
+ */
+float sizer_get_opacity(const component *c);
+
+/**
+ * @brief Set the sizer's opacity
+ * @param c Sizer component to modify
+ * @param opacity Opacity value (0.0 to 1.0)
+ */
+void sizer_set_opacity(const component *c, float opacity);
 
 /**
  * @brief Begin iterating over child components

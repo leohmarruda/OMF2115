@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Options
 OPTION(USE_TESTS "Build unittests" OFF)
+OPTION(OMF3K_SOURCE_TRACE "Enable opt-in OMF3K source match CSV tracing" OFF)
 OPTION(USE_TOOLS "Build tools" OFF)
 OPTION(USE_LIBPNG "Build with libpng support" ON)
 OPTION(USE_SANITIZERS "Enable Asan and Ubsan" OFF)
@@ -54,12 +55,16 @@ if(MSVC)
     # Disable select warnings:
     # C4100: unreferenced formal parameter
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4100")
+    # C4456: declaration hides previous local declaration
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4456")
     # C4244: implicit conversion, possible loss of data
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4244")
     # C4267: implicit conversion from size_t, possible loss of data
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4267")
     # _CRT_SECURE_NO_WARNINGS: disable warnings when calling functions like strncpy or sscanf
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D_CRT_SECURE_NO_WARNINGS")
+    # _CRT_NONSTDC_NO_WARNINGS: disable warnings when calling POSIX functions like fileno
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D_CRT_NONSTDC_NO_WARNINGS")
 
     # Error on certain warnings:
     # C4013: call to undefined function
@@ -79,10 +84,7 @@ if(MSVC)
     # C4702: unreachable code
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /we4702")
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wformat=2 -pedantic -Wvla")
-    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat-signedness")
-    endif()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wformat -pedantic -Wvla")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb -Werror -fno-omit-frame-pointer")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -g -O2 -fno-omit-frame-pointer -DNDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
@@ -215,17 +217,14 @@ target_compile_definitions(openomf_core PUBLIC
     "$<$<CONFIG:Debug>:DEBUGMODE>"
     "$<$<BOOL:${USE_EXTENDED_PALETTE}>:USE_EXTENDED_PALETTE>"
 )
+if(OMF3K_SOURCE_TRACE)
+    target_compile_definitions(openomf_core PRIVATE OMF3K_SOURCE_TRACE)
+endif()
 omf_target_precompile_headers(openomf_core PUBLIC
     "<SDL.h>"
     "<enet/enet.h>"
     "<epoxy/gl.h>"
 )
-# Match all variants of GCC and Clang.
-if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
-    set_source_files_properties("${CMAKE_SOURCE_DIR}/src/vendored/argtable/argtable3.c"
-        PROPERTIES COMPILE_OPTIONS "-Wno-format-nonliteral"
-    )
-endif()
 target_link_libraries(openomf_core PRIVATE
     openomf::confuse
     openomf::enet
@@ -427,6 +426,17 @@ endif()
 # Make sure libraries are linked
 target_link_libraries(openomf PRIVATE ${CORELIBS})
 target_link_libraries(openomf PRIVATE openomf::argtable openomf::zip openomf::SDL2main openomf::epoxy)
+
+# A separate experimental 3D slice; the original game and its data path are untouched.
+option(BUILD_3D_PROTOTYPE "Build the standalone 3D combat/story prototype" ON)
+if(BUILD_3D_PROTOTYPE)
+    add_executable(omf3d_prototype omf3k/prototype/main.c omf3k/prototype/source_replay.c
+                                   omf3k/prototype/pose_catalog.c)
+    target_link_libraries(omf3d_prototype PRIVATE openomf::SDL2main openomf::epoxy)
+    if(NOT WIN32)
+        target_link_libraries(omf3d_prototype PRIVATE m)
+    endif()
+endif()
 foreach(TARGET ${TOOL_TARGET_NAMES})
     target_link_libraries(${TARGET} PRIVATE ${CORELIBS})
     target_link_libraries(${TARGET} PRIVATE openomf::argtable openomf::zip openomf::SDL2main openomf::epoxy)

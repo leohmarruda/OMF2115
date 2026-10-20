@@ -55,39 +55,37 @@ void menu_help_render(component *c) {
     text_document_draw(local->td, 15, 20);
 }
 
-static bool menu_help_event(component *c, SDL_Event *event) {
-    if(event->type != SDL_KEYDOWN) {
-        return false;
-    }
+static int menu_help_event(component *c, SDL_Event *event) {
     help_menu_data *local = menu_get_userdata(c);
     SDL_Scancode sc = event->key.keysym.scancode;
     if(sc == SDL_SCANCODE_PAGEUP && local->page > 0) {
         local->page--;
         help_menu_update(local);
-        return true;
+        return 1;
     } else if(sc == SDL_SCANCODE_PAGEDOWN && local->page < NUM_PAGES - 1) {
         local->page++;
         help_menu_update(local);
-        return true;
     }
-    return false;
+
+    return 0;
 }
 
-static bool menu_help_action(component *c, int action, int source) {
+static int menu_help_action(component *c, int action) {
     help_menu_data *local = menu_get_userdata(c);
     if((action == ACT_UP) && local->page > 0) {
         local->page--;
         help_menu_update(local);
-        return true;
+        return 1;
     } else if((action == ACT_DOWN) && local->page < NUM_PAGES - 1) {
         local->page++;
         help_menu_update(local);
-        return true;
+        return 1;
     } else if(action == ACT_ESC) {
-        menu_finish(c);
-        return true;
+        menu *m = sizer_get_obj(c);
+        m->finished = 1;
     }
-    return false;
+
+    return 0;
 }
 
 component *menu_help_create(scene *s) {

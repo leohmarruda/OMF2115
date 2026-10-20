@@ -4,42 +4,11 @@
 #include "game/gui/menu_background.h"
 #include "game/gui/sizer.h"
 #include "utils/allocator.h"
+#include "utils/log.h"
 #include "utils/miscmath.h"
 #include "video/color.h"
 #include "video/surface.h"
 #include "video/video.h"
-
-typedef struct menu {
-    surface *bg1;      ///< Primary background surface
-    surface *bg2;      ///< Secondary background surface
-    surface *help_bg1; ///< Primary help area background
-    surface *help_bg2; ///< Secondary help area background
-    int selected;      ///< Index of selected item
-    int margin_top;    ///< Top margin in pixels
-    int padding;       ///< Padding between items
-    bool finished;     ///< Whether the menu is finished
-    bool horizontal;   ///< Whether items are arranged horizontally
-    bool background;   ///< Whether to draw background
-    bool centered;     ///< Whether items are centered
-    bool is_submenu;   ///< Whether this menu is a submenu
-
-    int help_x;                             ///< Help area X coordinate
-    int help_y;                             ///< Help area Y coordinate
-    int help_w;                             ///< Help area width
-    int help_h;                             ///< Help area height
-    vga_index help_text_color;              ///< Help text color
-    text_horizontal_align help_text_halign; ///< Help text horizontal alignment
-    text_vertical_align help_text_valign;   ///< Help text vertical alignment
-    font_size help_text_font;               ///< Help text font
-
-    char prev_submenu_state;           ///< Previous submenu state
-    component *submenu;                ///< Active submenu
-    menu_submenu_done_cb submenu_done; ///< Submenu completion callback
-
-    void *userdata;    ///< User data for callbacks
-    menu_free_cb free; ///< Free callback
-    menu_tick_cb tick; ///< Tick callback
-} menu;
 
 void menu_select(component *c, component *sc) {
     menu *m = sizer_get_obj(c);
@@ -72,7 +41,11 @@ void menu_select(component *c, component *sc) {
 
 component *menu_selected(const component *mc) {
     menu *m = sizer_get_obj(mc);
-    return sizer_get(mc, m->selected);
+    component *c = sizer_get(mc, m->selected);
+    if(c != NULL) {
+        return c;
+    }
+    return NULL;
 }
 
 void menu_set_submenu_done_cb(component *c, menu_submenu_done_cb done_cb) {
@@ -119,37 +92,35 @@ static void menu_render(component *c) {
     // Otherwise handle this component
     iterator it;
     component **tmp;
-    const vec2i pos = component_get_pos(c);
     if(m->bg1) {
-        video_draw_remap(m->bg1, pos.x, pos.y, 4, 1, 0);
+        video_draw_remap(m->bg1, c->x, c->y, 4, 1, 0);
     }
     if(m->bg2) {
-        video_draw(m->bg2, pos.x, pos.y);
+        video_draw(m->bg2, c->x, c->y);
     }
     sizer_begin_iterator(c, &it);
     int i = 0;
     foreach(it, tmp) {
         component_render(*tmp);
-        text *help = component_get_help_text(*tmp);
-        if(m->selected == i && help != NULL) {
+        if(m->selected == i && (*tmp)->help != NULL) {
             if(m->help_bg1) {
                 video_draw_remap(m->help_bg1, m->help_x - 8, m->help_y - 8, 4, 1, 0);
             }
             if(m->help_bg2) {
                 video_draw(m->help_bg2, m->help_x - 8, m->help_y - 8);
             }
-            text_set_bounding_box(help, m->help_w, m->help_h);
-            text_set_color(help, m->help_text_color);
-            text_set_horizontal_align(help, m->help_text_halign);
-            text_set_vertical_align(help, m->help_text_valign);
-            text_set_font(help, m->help_text_font);
-            text_draw(help, m->help_x, m->help_y);
+            text_set_bounding_box((*tmp)->help, m->help_w, m->help_h);
+            text_set_color((*tmp)->help, m->help_text_color);
+            text_set_horizontal_align((*tmp)->help, m->help_text_halign);
+            text_set_vertical_align((*tmp)->help, m->help_text_valign);
+            text_set_font((*tmp)->help, m->help_text_font);
+            text_draw((*tmp)->help, m->help_x, m->help_y);
         }
         i++;
     }
 }
 
-static bool menu_event(component *mc, SDL_Event *event) {
+static int menu_event(component *mc, SDL_Event *event) {
     menu *m = sizer_get_obj(mc);
 
     // If submenu is set, we need to use it
@@ -162,21 +133,16 @@ static bool menu_event(component *mc, SDL_Event *event) {
     if(c != NULL) {
         return component_event(c, event);
     }
-    return false;
+    return 1;
 }
 
-static bool menu_action(component *mc, int action, int source) {
+static int menu_action(component *mc, int action) {
     menu *m = sizer_get_obj(mc);
+    component *c;
 
     // If submenu is set, we need to use it
     if(m->submenu != NULL && !menu_is_finished(m->submenu)) {
-        return component_action(m->submenu, action, source);
-    }
-
-    // While the selected component is in gamepad edit mode it owns all gamepad input except ESC.
-    component *c = sizer_get(mc, m->selected);
-    if(c != NULL && component_is_editing(c) && source == CTRL_TYPE_GAMEPAD && action != ACT_ESC) {
-        return component_action(c, action, source);
+        return component_action(m->submenu, action);
     }
 
     if(action == ACT_ESC) {
@@ -189,24 +155,16 @@ static bool menu_action(component *mc, int action, int source) {
             // If the last item is already selected, and ESC if punched, change the action to punch
             // This is then passed to the quit (last) component and its callback is called
             // Hacky, but works well in menu sizer.
-            m->finished = true;
+            m->finished = 1;
             action = ACT_PUNCH;
         } else {
-            return true;
+            return 0;
         }
     }
 
-    // In a horizontal menu, let the selected component consume left/right
-    // first (a text input uses these to move its cursor). Only fall back to
-    // moving the selection if the component does not handle the action.
-    c = sizer_get(mc, m->selected);
-    if(c != NULL && m->horizontal && (action == ACT_LEFT || action == ACT_RIGHT) &&
-       component_action(c, action, source)) {
-        return true;
-    }
-
     // Handle down/up selection movement
-    if(c != NULL && component_is_selectable(c) &&
+    c = sizer_get(mc, m->selected);
+    if(c != NULL && c->supports_select &&
        (((action == ACT_DOWN || action == ACT_UP) && !m->horizontal) ||
         ((action == ACT_LEFT || action == ACT_RIGHT) && m->horizontal))) {
         component *old_c = c;
@@ -241,17 +199,17 @@ static bool menu_action(component *mc, int action, int source) {
             audio_play_sound_simple(19, 0);
             component_select(c, 1);
         }
-        return true;
+        return 0;
     }
 
     // If the key wasn't handled yet and we have a valid component,
     // pass on the event
     if(c != NULL) {
-        return component_action(c, action, source);
+        return component_action(c, action);
     }
 
     // Tell the caller that the event was not handled here.
-    return false;
+    return 1;
 }
 
 void menu_set_submenu(component *mc, component *submenu) {
@@ -263,21 +221,22 @@ void menu_set_submenu(component *mc, component *submenu) {
     }
     m->submenu = submenu;
     m->prev_submenu_state = 0;
-    component_set_parent(submenu, mc);
+    submenu->parent = mc; // Set correct parent
     component_init(m->submenu, component_get_theme(mc));
-    const vec2i pos = component_get_pos(mc);
-    const vec2i size = component_get_size(mc);
-    component_layout(m->submenu, pos.x, pos.y, size.x, size.y);
+    component_layout(m->submenu, mc->x, mc->y, mc->w, mc->h);
 }
 
-void menu_link_menu(component *mc, component *submenu, int x, int y, int w, int h) {
+void menu_link_menu(component *mc, gui_frame *linked_menu) {
     menu *m = sizer_get_obj(mc);
     if(m->submenu) {
         component_free(m->submenu);
     }
-    m->submenu = submenu;
+    int x, y, w, h;
+    gui_frame_get_measurements(linked_menu, &x, &y, &w, &h);
+    component *root = gui_frame_get_root(linked_menu);
+    m->submenu = root;
     m->prev_submenu_state = 0;
-    component_set_parent(submenu, mc);
+    root->parent = mc; // Set correct parent
     component_init(m->submenu, component_get_theme(mc));
     component_layout(m->submenu, x, y, w, h);
 }
@@ -287,12 +246,7 @@ component *menu_get_submenu(const component *c) {
     return m->submenu;
 }
 
-void menu_finish(component *c) {
-    menu *m = sizer_get_obj(c);
-    m->finished = true;
-}
-
-bool menu_is_finished(const component *c) {
+int menu_is_finished(const component *c) {
     menu *m = sizer_get_obj(c);
     return m->finished;
 }
@@ -308,8 +262,7 @@ static void menu_layout(component *c, int x, int y, int w, int h) {
     int non_reserved_space = available_space;
     int non_reserved_items = sizer_size(c);
     foreach(it, tmp) {
-        const vec2i size_hint = component_get_size_hint(*tmp);
-        const int hint = m->horizontal ? size_hint.x : size_hint.y;
+        int hint = m->horizontal ? (*tmp)->w_hint : (*tmp)->h_hint;
         if(hint > -1) {
             non_reserved_space -= hint;
             non_reserved_items -= 1;
@@ -351,14 +304,13 @@ static void menu_layout(component *c, int x, int y, int w, int h) {
     foreach(it, tmp) {
         // Set component position and size
         int left = available_space - (offset > 0 ? offset - m->padding : offset);
-        const vec2i size_hint = component_get_size_hint(*tmp);
         if(m->horizontal) {
-            int obj_w = size_hint.x > -1 ? size_hint.x : non_hinted_item_space;
+            int obj_w = (*tmp)->w_hint > -1 ? (*tmp)->w_hint : non_hinted_item_space;
             obj_w = min2(left, obj_w);
             component_layout(*tmp, x + offset, y, obj_w, h);
             offset += obj_w + m->padding;
         } else {
-            int obj_h = size_hint.y > -1 ? size_hint.y : non_hinted_item_space;
+            int obj_h = (*tmp)->h_hint > -1 ? (*tmp)->h_hint : non_hinted_item_space;
             obj_h = min2(left, obj_h);
             component_layout(*tmp, x, y + offset, w, obj_h);
             offset += obj_h + m->padding;

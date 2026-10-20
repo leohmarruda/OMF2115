@@ -21,7 +21,7 @@
 #include "video/video.h"
 
 bool lab_dash_main_photo_select(component *c, void *userdata) {
-    trnmenu_finish(component_get_parent(c));
+    trnmenu_finish(c->parent);
     return true;
 }
 
@@ -54,7 +54,7 @@ bool lab_dash_main_chr_load(component *c, void *userdata) {
 
     assert(oldchr != NULL);
     assert(oldchr != chr);
-    log_debug("Freeing previous CHR %s", str_c(&oldchr->pilot.name));
+    log_debug("Freeing previous CHR %s", oldchr->pilot.name);
     sd_chr_free(oldchr);
     omf_free(oldchr);
 
@@ -63,11 +63,12 @@ bool lab_dash_main_chr_load(component *c, void *userdata) {
     if(dw->savegames) {
         iterator it;
         list_iter_begin(dw->savegames, &it);
+        sd_chr_file *chr = NULL;
 
         int16_t i = 0;
         foreach(it, chr) {
             if(i != dw->index) {
-                log_debug("Freeing CHR %s", str_c(&chr->pilot.name));
+                log_debug("Freeing CHR %s", chr->pilot.name);
                 sd_chr_free(chr);
             }
             ++i;
@@ -77,7 +78,7 @@ bool lab_dash_main_chr_load(component *c, void *userdata) {
         omf_free(dw->savegames);
     }
 
-    trnmenu_finish(component_get_parent(c)); // We refer to the components sizer
+    trnmenu_finish(c->parent); // We refer to the components sizer
     return true;
 }
 
@@ -86,7 +87,7 @@ bool lab_dash_main_chr_delete(component *c, void *userdata) {
     game_player *p1 = game_state_get_player(dw->scene->gs, 0);
     const char *pilot_name = str_c(&p1->pilot->name);
     sg_delete(pilot_name);
-    trnmenu_finish(component_get_parent(c));
+    trnmenu_finish(c->parent);
     return true;
 }
 
@@ -182,10 +183,8 @@ void lab_dash_sim_update_portraits(dashboard_widgets *dw) {
         }
     }
 
-    component *parent = component_get_parent(dw->photo_highlight);
-    const vec2i pos = component_get_pos(parent);
-    const vec2i size = component_get_size(parent);
-    component_layout(parent, pos.x, pos.y, size.x, size.y);
+    component_layout(dw->photo_highlight->parent, dw->photo_highlight->parent->x, dw->photo_highlight->parent->y,
+                     dw->photo_highlight->parent->w, dw->photo_highlight->parent->h);
 }
 
 bool lab_dash_sim_left(component *c, void *userdata) {
@@ -335,7 +334,7 @@ void lab_dash_main_chr_done(component *menu, component *submenu) {
     if(dw->savegames) {
         list_iter_begin(dw->savegames, &it);
         foreach(it, chr) {
-            log_debug("freeing CHR %s", str_c(&chr->pilot.name));
+            log_debug("freeing CHR %s", chr->pilot.name);
             sd_chr_free(chr);
         }
         list_free(dw->savegames);

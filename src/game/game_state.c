@@ -7,6 +7,11 @@
 #include "formats/pilot.h"
 #include "game/audio/sound_tracker.h"
 #include "game/common_defines.h"
+#ifdef OMF3K_SOURCE_TRACE
+#include "game/objects/har.h"
+#include "game/objects/projectile.h"
+#include "../../omf3k/prototype/live_input.h"
+#endif
 #include "game/protos/object.h"
 #include "game/protos/scene.h"
 #include "game/scenes/arena.h"
@@ -39,16 +44,11 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 // slowest dynamic tick, in ms
 #define MS_PER_OMF_TICK_SLOWEST 60
-
-static void _setup_rec_controller(game_state *gs, int player_id, sd_rec_file *rec);
-
-// How long the scene waits after order to move to another scene
-// Used for crossfades
-#define FRAME_WAIT_TICKS 30
 
 typedef struct {
     int layer;      ///< Object rendering layer
@@ -56,6 +56,199 @@ typedef struct {
     int singleton;  ///< 1 if object should be the only representative of its animation ID
     object *obj;
 } render_obj;
+
+#ifdef OMF3K_SOURCE_TRACE
+static FILE *omf3k_trace_file;
+static int omf3k_trace_initialized;
+#ifdef _WIN32
+static HANDLE omf3k_state_mapping;
+static Omf3kLiveState *omf3k_shared_state;
+static HANDLE omf3k_input_mapping;
+static Omf3kLiveInput *omf3k_shared_input;
+#endif
+
+static void omf3k_trace_close(void) {
+    if(omf3k_trace_file) {
+        fclose(omf3k_trace_file);
+    }
+#ifdef _WIN32
+    if(omf3k_shared_state) UnmapViewOfFile(omf3k_shared_state);
+    if(omf3k_state_mapping) CloseHandle(omf3k_state_mapping);
+    if(omf3k_shared_input) UnmapViewOfFile(omf3k_shared_input);
+    if(omf3k_input_mapping) CloseHandle(omf3k_input_mapping);
+#endif
+}
+
+static void omf3k_live_restart_tick(game_state *gs) {
+    if(!gs->init_flags->omf3k_live) return;
+#ifdef _WIN32
+    if(!omf3k_shared_input) {
+        const char *input_map_name = getenv("OMF3K_INPUT_MAP");
+        if(input_map_name && *input_map_name) {
+            omf3k_input_mapping = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, input_map_name);
+            if(omf3k_input_mapping) {
+                omf3k_shared_input = MapViewOfFile(omf3k_input_mapping, FILE_MAP_ALL_ACCESS, 0, 0,
+                                                   sizeof(Omf3kLiveInput));
+            }
+            if(omf3k_input_mapping && !omf3k_shared_input) {
+                CloseHandle(omf3k_input_mapping);
+                omf3k_input_mapping = NULL;
+            }
+        }
+    }
+
+    if(!omf3k_shared_input || !InterlockedExchange(&omf3k_shared_input->restart_requested, 0)) return;
+
+    if(gs->this_id >= SCENE_ARENA0 && gs->this_id <= SCENE_ARENA4 && scene_is_arena(gs->sc)) {
+        gs->arena = gs->this_id - SCENE_ARENA0;
+        arena_restart(gs->sc);
+        gs->next_id = gs->this_id;
+        gs->next_wait_ticks = 0;
+    } else {
+        gs->arena = 0;
+        gs->next_id = SCENE_ARENA0;
+        gs->next_wait_ticks = 1;
+    }
+#endif
+}
+
+static void omf3k_trace_match_tick(game_state *gs) {
+    if(!scene_is_arena(gs->sc)) {
+        return;
+    }
+    if(!omf3k_trace_initialized) {
+        omf3k_trace_initialized = 1;
+        const char *trace_path = getenv("OMF3K_TRACE_PATH");
+        if(trace_path && *trace_path) {
+            omf3k_trace_file = fopen(trace_path, "w");
+            if(omf3k_trace_file) {
+                fputs("tick,player,har,health,max_health,x,y,vx,vy,facing,state,move,animation,sprite,animation_tick,match_winner,hit_mask,block_mask,round_winner,projectiles\n",
+                      omf3k_trace_file);
+            } else {
+                log_error("Unable to open OMF3K trace file: %s", trace_path);
+            }
+        }
+#ifdef _WIN32
+        const char *state_map_name = getenv("OMF3K_STATE_MAP");
+        if(state_map_name && *state_map_name) {
+            omf3k_state_mapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0,
+                                                      sizeof(Omf3kLiveState), state_map_name);
+            if(omf3k_state_mapping) {
+                omf3k_shared_state = MapViewOfFile(omf3k_state_mapping, FILE_MAP_ALL_ACCESS, 0, 0,
+                                                   sizeof(Omf3kLiveState));
+            }
+            if(!omf3k_shared_state) log_error("Unable to create OMF3K live state channel.");
+        }
+#endif
+        if(omf3k_trace_file
+#ifdef _WIN32
+           || omf3k_state_mapping
+#endif
+        ) atexit(omf3k_trace_close);
+    }
+    if(!omf3k_trace_file
+#ifdef _WIN32
+       && !omf3k_shared_state
+#endif
+    ) {
+        return;
+    }
+    object *objects[2];
+    har *hars[2];
+    for(int i = 0; i < 2; i++) {
+        game_player *gp = game_state_get_player(gs, i);
+        objects[i] = game_state_find_object(gs, game_player_get_har_obj_id(gp));
+        if(!objects[i] || !objects[i]->userdata) {
+            return;
+        }
+        hars[i] = objects[i]->userdata;
+    }
+    int match_winner = arena_is_over(gs->sc);
+    int hit_mask, block_mask, round_winner;
+    arena_take_omf3k_events(gs->sc, &hit_mask, &block_mask, &round_winner);
+    char projectiles[256] = "-";
+    size_t projectile_length = 0;
+    int projectile_count = 0;
+    Omf3kLiveProjectile projectile_snapshots[OMF3K_LIVE_PROJECTILE_MAX];
+    iterator projectile_it;
+    render_obj *projectile_obj;
+    vector_iter_begin(&gs->objects, &projectile_it);
+    foreach(projectile_it, projectile_obj) {
+        object *obj = projectile_obj->obj;
+        if(obj->group != GROUP_PROJECTILE || !obj->cur_animation ||
+           projectile_count >= OMF3K_LIVE_PROJECTILE_MAX) continue;
+        projectile_snapshots[projectile_count] = (Omf3kLiveProjectile){
+            .owner = projectile_get_owner(obj), .animation = obj->cur_animation->id,
+            .sprite = obj->cur_sprite_id, .facing = object_get_direction(obj),
+            .x = obj->pos.x, .y = obj->pos.y};
+        int written = snprintf(projectiles + projectile_length, sizeof(projectiles) - projectile_length,
+                               "%s%u:%d:%d:%.3f:%.3f:%d", projectile_count ? "|" : "",
+                               (unsigned)projectile_get_owner(obj), obj->cur_animation->id,
+                               obj->cur_sprite_id, obj->pos.x, obj->pos.y, object_get_direction(obj));
+        if(written < 0 || (size_t)written >= sizeof(projectiles) - projectile_length) break;
+        projectile_length += (size_t)written;
+        projectile_count++;
+    }
+#ifdef _WIN32
+    if(omf3k_shared_state) {
+        InterlockedIncrement(&omf3k_shared_state->sequence);
+        MemoryBarrier();
+        omf3k_shared_state->tick = gs->tick - 1;
+        omf3k_shared_state->match_winner = match_winner;
+        omf3k_shared_state->hit_mask = hit_mask;
+        omf3k_shared_state->block_mask = block_mask;
+        omf3k_shared_state->round_winner = round_winner;
+        omf3k_shared_state->projectile_count = projectile_count;
+        memcpy(omf3k_shared_state->projectile, projectile_snapshots,
+               (size_t)projectile_count * sizeof(*projectile_snapshots));
+        for(int i = 0; i < 2; i++) {
+            object *obj = objects[i];
+            har *h = hars[i];
+            Omf3kLiveFighter *f = &omf3k_shared_state->fighter[i];
+            f->har = h->id;
+            f->health = h->health;
+            f->max_health = h->health_max;
+            f->x = obj->pos.x;
+            f->y = obj->pos.y;
+            f->vx = obj->vel.x;
+            f->vy = obj->vel.y;
+            f->facing = object_get_direction(obj);
+            f->state = h->state;
+            f->move = h->executing_move;
+            f->animation = obj->cur_animation ? obj->cur_animation->id : -1;
+            f->sprite = obj->cur_sprite_id;
+            f->animation_tick = obj->animation_state.current_tick;
+        }
+        MemoryBarrier();
+        InterlockedIncrement(&omf3k_shared_state->sequence);
+    }
+#endif
+    if(!omf3k_trace_file) return;
+    for(int i = 0; i < 2; i++) {
+        object *obj = objects[i];
+        har *h = hars[i];
+        fprintf(omf3k_trace_file, "%u,%d,%u,%d,%d,%.3f,%.3f,%.3f,%.3f,%d,%u,%u,%d,%d,%u,%d,%d,%d,%d,%s\n",
+                gs->tick - 1, i, (unsigned)h->id, h->health, h->health_max, obj->pos.x, obj->pos.y,
+                obj->vel.x, obj->vel.y, object_get_direction(obj), (unsigned)h->state,
+                (unsigned)h->executing_move, obj->cur_animation ? obj->cur_animation->id : -1,
+                obj->cur_sprite_id, obj->animation_state.current_tick, match_winner,
+                hit_mask, block_mask, round_winner, projectiles);
+    }
+    fflush(omf3k_trace_file);
+}
+#endif
+
+enum
+{
+    TICK_DYNAMIC = 0,
+    TICK_STATIC,
+};
+
+static void _setup_rec_controller(game_state *gs, int player_id, sd_rec_file *rec);
+
+// How long the scene waits after order to move to another scene
+// Used for crossfades
+#define FRAME_WAIT_TICKS 30
 
 // 14 bytes of match settings
 void game_state_encode_match_settings(serial *ser, match_settings *ms) {
@@ -302,7 +495,59 @@ int game_state_create(game_state *gs, const engine_init_flags *init_flags) {
 
     reconfigure_controller(gs);
     int nscene;
-    if(path_is_set(&init_flags->rec_file) > 0 && init_flags->playback == 1) {
+    if(init_flags->omf3k_live) {
+        const char *live_player = getenv("OMF3K_LIVE_PLAYER");
+        bool shadow_player = live_player && strcmp(live_player, "Shadow") == 0;
+        const char *selected_pilot = getenv("OMF3K_LIVE_PILOT_ID");
+        int selected_pilot_id = selected_pilot ? atoi(selected_pilot) : -1;
+        if(selected_pilot_id < 0 || selected_pilot_id >= NUMBER_OF_PLAYABLE_PILOT_TYPES) {
+            selected_pilot_id = shadow_player ? PILOT_SHIRRO : PILOT_CRYSTAL;
+        }
+        _setup_keyboard(gs, 0, 0);
+        nscene = SCENE_ARENA0;
+        gs->this_id = nscene;
+        gs->next_id = nscene;
+        game_state_match_settings_defaults(gs);
+        gs->match_settings.rounds = 0;
+        gs->match_settings.hazards = false;
+        for(int i = 0; i < 2; i++) {
+            game_player *player = gs->players[i];
+            bool use_shadow = i == 0 ? shadow_player : !shadow_player;
+            int pilot_id = i == 0 ? selected_pilot_id :
+                (use_shadow ? PILOT_SHIRRO : PILOT_CRYSTAL);
+            pilot info;
+            pilot_get_info(&info, pilot_id);
+            player->pilot->pilot_id = pilot_id;
+            player->pilot->har_id = use_shadow ? HAR_SHADOW : HAR_JAGUAR;
+            player->pilot->power = info.power;
+            player->pilot->agility = info.agility;
+            player->pilot->endurance = info.endurance;
+            player->pilot->sex = info.sex;
+            if(use_shadow) {
+                // Optional original Tournament state: Shadow's shadow attacks (e.g. Shadow Punch,
+                // AF move 23) only have a script at enhancement level 3. Default 0 = plain 1P rules.
+                const char *enh = getenv("OMF3K_SHADOW_ENHANCEMENT");
+                int level = enh ? atoi(enh) : 0;
+                if(level >= 0 && level <= 3) {
+                    player->pilot->enhancements[HAR_SHADOW] = (char)level;
+                }
+            }
+            sd_pilot_set_player_color(player->pilot, PRIMARY, info.color_1);
+            sd_pilot_set_player_color(player->pilot, SECONDARY, info.color_2);
+            sd_pilot_set_player_color(player->pilot, TERTIARY, info.color_3);
+            str_set_c(&player->pilot->name, lang_get(pilot_id + 20));
+            chr_score_reset(&player->score, 1);
+        }
+        _setup_ai(gs, 1);
+        if(scene_create(gs->sc, gs, nscene)) {
+            log_error("Error while loading OMF3K live scene.");
+            goto error_0;
+        }
+        if(arena_create(gs->sc)) {
+            log_error("Error while creating OMF3K live arena.");
+            goto error_1;
+        }
+    } else if(path_is_set(&init_flags->rec_file) > 0 && init_flags->playback == 1) {
         gs->rec = omf_malloc(sizeof(sd_rec_file));
         sd_rec_create(gs->rec);
         int ret = sd_rec_load(gs->rec, &init_flags->rec_file);
@@ -448,7 +693,7 @@ void game_state_hit_pause(game_state *gs) {
 
 void game_state_set_speed(game_state *gs, int rate) {
     gs->speed = max2(rate, 0);
-    log_debug("game speed set to %u", gs->speed);
+    log_debug("game speed set to %d", gs->speed);
 }
 
 unsigned int game_state_get_speed(game_state *gs) {
@@ -553,11 +798,12 @@ void game_state_set_paused(game_state *gs, unsigned int paused) {
     gs->paused = paused;
 }
 
-bool game_state_handle_event(game_state *gs, SDL_Event *event) {
+// Return 0 if event was handled here
+int game_state_handle_event(game_state *gs, SDL_Event *event) {
     if(event->type == SDL_KEYDOWN && is_demoplay(gs) && event->key.keysym.sym == SDLK_ESCAPE) {
         // ESC during demo mode jumps you back to the main menu
         game_state_set_next(gs, SCENE_MENU);
-        return true;
+        return 0;
     } else if(event->type == SDL_KEYDOWN && is_demoplay(gs) && event->key.keysym.sym == SDLK_RETURN) {
         // ENTER during demo mode skips menus
         if(gs->sc->id < SCENE_ARENA0 || gs->sc->id > SCENE_ARENA4) {
@@ -565,10 +811,13 @@ bool game_state_handle_event(game_state *gs, SDL_Event *event) {
                 game_state_init_demo(gs);
             }
             game_state_set_next(gs, rand_arena());
-            return true;
+            return 0;
         }
     }
-    return scene_event(gs->sc, event);
+    if(scene_event(gs->sc, event) == 0) {
+        return 0;
+    }
+    return 1;
 }
 
 void cross_fade_transform(damage_tracker *damage, vga_palette *pal, void *userdata) {
@@ -697,7 +946,11 @@ void game_state_debug(game_state *gs) {
 #endif
 }
 
-int game_state_swap_scene(game_state *gs, int scene_id) {
+int game_load_new(game_state *gs, int scene_id) {
+    // Free old scene
+    scene_free(gs->sc);
+    omf_free(gs->sc);
+
     // Remove old objects
     render_obj *robj;
     iterator it;
@@ -825,12 +1078,6 @@ error_0:
     return 1;
 }
 
-int game_load_new(game_state *gs, int scene_id) {
-    scene_free(gs->sc);
-    omf_free(gs->sc);
-    return game_state_swap_scene(gs, scene_id);
-}
-
 void game_state_call_collide(game_state *gs) {
     object *a, *b;
     unsigned int size = vector_size(&gs->objects);
@@ -853,7 +1100,7 @@ void game_state_cleanup(game_state *gs) {
     iterator it;
     vector_iter_begin(&gs->objects, &it);
     foreach(it, robj) {
-        if(object_is_finished(robj->obj)) {
+        if(object_finished(robj->obj)) {
             /*log_debug("Animation object %d is finished, removing.", robj->obj->cur_animation->id);*/
             object_free(robj->obj);
             omf_free(robj->obj);
@@ -913,33 +1160,22 @@ static int sound_pan_lookup_object(void *ctx, uint32_t object_id) {
     return clamp((pos.x - 160) * 100 / 160, -100, 100);
 }
 
-void game_state_call_dynamic_tick_advance(game_state *gs) {
+// This function is called with changing interval, depending on the value of game speed
+void game_state_call_tick(game_state *gs, const int mode) {
     render_obj *robj;
     iterator it;
     vector_iter_begin(&gs->objects, &it);
     foreach(it, robj) {
-        object_dynamic_tick_advance(robj->obj);
-    }
-}
-
-void game_state_call_dynamic_tick_apply(game_state *gs) {
-    render_obj *robj;
-    iterator it;
-    vector_iter_begin(&gs->objects, &it);
-    foreach(it, robj) {
-        object_dynamic_tick_apply(robj->obj);
+        if(mode == TICK_DYNAMIC) {
+            object_dynamic_tick(robj->obj);
+        } else {
+            object_static_tick(robj->obj);
+        }
     }
 
-    const int delta = game_state_ms_per_dyntick(gs);
-    sound_tracker_tick(&gs->tracker, delta, sound_pan_lookup_object, gs);
-}
-
-void game_state_call_static_tick(game_state *gs) {
-    render_obj *robj;
-    iterator it;
-    vector_iter_begin(&gs->objects, &it);
-    foreach(it, robj) {
-        object_static_tick(robj->obj);
+    if(mode == TICK_DYNAMIC) {
+        const int delta = game_state_ms_per_dyntick(gs);
+        sound_tracker_tick(&gs->tracker, delta, sound_pan_lookup_object, gs);
     }
 }
 
@@ -949,6 +1185,12 @@ void game_state_merge_sounds(game_state *old, game_state *new) {
 
 // This function is always called with the same interval, and game speed does not affect it
 void game_state_static_tick(game_state *gs, bool replay) {
+#ifdef OMF3K_SOURCE_TRACE
+    if(!replay) {
+        omf3k_live_restart_tick(gs);
+    }
+#endif
+
     // Set scene crossfade values
     if(gs->this_wait_ticks > 0) {
         gs->this_wait_ticks--;
@@ -999,7 +1241,7 @@ void game_state_static_tick(game_state *gs, bool replay) {
     scene_static_tick(gs->sc, game_state_is_paused(gs));
 
     // Call static tick functions
-    game_state_call_static_tick(gs);
+    game_state_call_tick(gs, TICK_STATIC);
 }
 
 // This function is called when the game speed requires it
@@ -1062,9 +1304,6 @@ void game_state_dynamic_tick(game_state *gs, bool replay) {
         // Clean up objects
         game_state_cleanup(gs);
 
-        // Advance animations first so movement and collision see the current tick's frames
-        game_state_call_dynamic_tick_advance(gs);
-
         // Call object_move for all objects
         game_state_call_move(gs);
 
@@ -1072,10 +1311,15 @@ void game_state_dynamic_tick(game_state *gs, bool replay) {
         game_state_call_collide(gs);
 
         // Tick all objects
-        game_state_call_dynamic_tick_apply(gs);
+        game_state_call_tick(gs, TICK_DYNAMIC);
 
         // Increment tick
         gs->tick++;
+#ifdef OMF3K_SOURCE_TRACE
+        if(!replay) {
+            omf3k_trace_match_tick(gs);
+        }
+#endif
     }
 
     if(!replay) {
@@ -1085,7 +1329,7 @@ void game_state_dynamic_tick(game_state *gs, bool replay) {
 
     // Speed back up
     if(gs->speed_slowdown_time == 0) {
-        log_debug("Slowdown: Speed back up from %u to %d.", gs->speed, gs->speed_slowdown_previous);
+        log_debug("Slowdown: Speed back up from %d to %d.", gs->speed, gs->speed_slowdown_previous);
         gs->speed = gs->speed_slowdown_previous;
     }
     if(gs->speed_slowdown_time >= 0) {
@@ -1237,9 +1481,9 @@ void game_state_init_demo(game_state *gs) {
 void game_state_menu_poll(game_state *gs, ctrl_event **ev) {
     gs->menu_ctrl->last = gs->menu_ctrl->current;
     gs->menu_ctrl->current = 0;
-    gs->menu_ctrl->type = CTRL_TYPE_KEYBOARD;
+    // poll keyboard
     keyboard_menu_poll(gs->menu_ctrl, ev);
-    gs->menu_ctrl->type = CTRL_TYPE_GAMEPAD;
+    // poll joysticks
     joystick_menu_poll_all(gs->menu_ctrl, ev);
 }
 

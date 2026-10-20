@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "game/protos/intersect.h"
 
 /**
@@ -10,7 +12,7 @@
  * \param b Object 2 to check
  * \return 1 if collision detected, 0 if not.
  */
-int intersect_object_object(const object *a, const object *b) {
+int intersect_object_object(object *a, object *b) {
     if(a->cur_sprite_id < 0 || b->cur_sprite_id < 0) {
         return 0;
     }
@@ -31,7 +33,7 @@ int intersect_object_object(const object *a, const object *b) {
  * \param point Point to intersect
  * \return 1 if collision detected, 0 if not.
  */
-int intersect_object_point(const object *obj, vec2i point) {
+int intersect_object_point(object *obj, vec2i point) {
     if(obj->cur_sprite_id < 0) {
         return 0;
     }
@@ -57,10 +59,11 @@ int intersect_object_point(const object *obj, vec2i point) {
  *
  * \param obj Source object that has the hitpoints
  * \param target Target object that is being hit
+ * \param level Amount of collision detections required for a positive return
  * \param point Approximate point of collision
  * \return 1 if collision detected, 0 if not.
  */
-int intersect(const object *obj, const object *target, vec2i *point, bool is_har) {
+int intersect(object *obj, object *target, int level, vec2i *point, bool is_har) {
     // Make sure both objects have sprites going
     if(obj->cur_sprite_id < 0 || target->cur_sprite_id < 0) {
         return 0;
@@ -84,19 +87,20 @@ int intersect(const object *obj, const object *target, vec2i *point, bool is_har
     vec2i size_a = object_get_size(obj);
     vec2i size_b = object_get_size(target);
 
-    if((object_get_direction(obj) == OBJECT_FACE_LEFT && !player_frame_isset(obj, TAG_R)) ||
-       (object_get_direction(obj) == OBJECT_FACE_RIGHT && player_frame_isset(obj, TAG_R))) {
+    if((object_get_direction(obj) == OBJECT_FACE_LEFT && !player_frame_isset(obj, "r")) ||
+       (object_get_direction(obj) == OBJECT_FACE_RIGHT && player_frame_isset(obj, "r"))) {
         object_dir = OBJECT_FACE_LEFT;
         pos_a.x = object_get_pos(obj).x + ((cur_sprite->pos.x * -1) - size_a.x);
     }
 
-    if((object_get_direction(target) == OBJECT_FACE_LEFT && !player_frame_isset(target, TAG_R)) ||
-       (object_get_direction(target) == OBJECT_FACE_RIGHT && player_frame_isset(target, TAG_R))) {
+    if((object_get_direction(target) == OBJECT_FACE_LEFT && !player_frame_isset(target, "r")) ||
+       (object_get_direction(target) == OBJECT_FACE_RIGHT && player_frame_isset(target, "r"))) {
         target_dir = OBJECT_FACE_LEFT;
         pos_b.x = object_get_pos(target).x + ((target_sprite->pos.x * -1) - size_b.x);
     }
 
     // Iterate through hitpoints
+    assert(level == 1 || level == 2);
     vec2i hcoords[2];
     int found = 0;
     iterator it;
@@ -122,8 +126,7 @@ int intersect(const object *obj, const object *target, vec2i *point, bool is_har
         // Make sure that the hitpixel is within the area of the target sprite
         if(xcoord < 0 || xcoord >= size_b.x) {
             continue;
-        }
-        if(ycoord < 0 || ycoord >= size_b.y) {
+        } else if(ycoord < 0 || ycoord >= size_b.y) {
             continue;
         }
 
@@ -140,26 +143,26 @@ int intersect(const object *obj, const object *target, vec2i *point, bool is_har
         // Only main HAR colors count
         if(sfc->data[hitpoint] != sfc->transparent && (sfc->data[hitpoint] < 96 || !is_har)) {
             hcoords[found++] = vec2i_create(xcoord, ycoord);
-        }
-        if(found > 0) {
-            vec2f sum = vec2f_create(0, 0);
-            for(int k = 0; k < found; k++) {
-                sum.x += hcoords[k].x;
-                sum.y += hcoords[k].y;
+            if(found >= level) {
+                vec2f sum = vec2f_create(0, 0);
+                for(int k = 0; k < level; k++) {
+                    sum.x += hcoords[k].x;
+                    sum.y += hcoords[k].y;
+                }
+                point->x = (sum.x / level) + pos_b.x;
+                point->y = (sum.y / level) + pos_b.y;
+                return 1;
             }
-            point->x = (sum.x / found) + pos_b.x;
-            point->y = (sum.y / found) + pos_b.y;
-            return 1;
         }
     }
 
     return 0;
 }
 
-int intersect_sprite_hitpoint(const object *obj, const object *target, vec2i *point) {
-    return intersect(obj, target, point, false);
+int intersect_sprite_hitpoint(object *obj, object *target, int level, vec2i *point) {
+    return intersect(obj, target, level, point, false);
 }
 
-int intersect_har_sprite_hitpoint(const object *obj, const object *target, vec2i *point) {
-    return intersect(obj, target, point, true);
+int intersect_har_sprite_hitpoint(object *obj, object *target, int level, vec2i *point) {
+    return intersect(obj, target, level, point, true);
 }

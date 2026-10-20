@@ -56,7 +56,7 @@ void sprite_play(sd_af_file *af, sd_bk_file *bk, int scale, int anim, int sprite
         return;
     }
 
-    printf("Sprite Info: pos=(%d,%d) size=(%d,%d) len=%u\n", s->pos.x, s->pos.y, s->width, s->height, s->len);
+    printf("Sprite Info: pos=(%d,%d) size=(%d,%d) len=%d\n", s->pos.x, s->pos.y, s->width, s->height, s->len);
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -160,7 +160,7 @@ void sprite_play(sd_af_file *af, sd_bk_file *bk, int scale, int anim, int sprite
                 if(changed) {
                     s = sd_animation_get_sprite(sd_af_get_move(af, anim)->animation, sprite);
                     sd_sprite_rgba_decode(&img, s, bk->palettes[0]);
-                    printf("Sprite Info: pos=(%d,%d) size=(%d,%d) len=%u\n", s->pos.x, s->pos.y, s->width, s->height,
+                    printf("Sprite Info: pos=(%d,%d) size=(%d,%d) len=%d\n", s->pos.x, s->pos.y, s->width, s->height,
                            s->len);
 
                     if(!(surface = SDL_CreateRGBSurfaceFrom((void *)img.data, img.w, img.h, 32, img.w * 4, rmask, gmask,
@@ -333,7 +333,7 @@ void move_set_key(sd_move *move, sd_animation *ani, const char **key, int kcount
             if(tmp < 21) {
                 str_set_c(&move->move_string, value);
             } else {
-                printf("String is too long! (%d bytes) Maximum size for move_string is 21 characters!\n", tmp);
+                printf("String is too long! (%u bytes) Maximum size for move_string is 21 characters!\n", tmp);
                 return;
             }
             break;
@@ -718,13 +718,14 @@ int main(int argc, char *argv[]) {
     struct arg_str *value = arg_str0(NULL, "value", "<value>", "Set value (requires --key)");
     struct arg_str *strip = arg_str0(NULL, "strip", "<tag>", "Strip tag from selected file, move or key (string)");
     struct arg_file *output = arg_file0("o", "output", "<file>", "Output .AF file");
+    struct arg_file *export_png = arg_file0(NULL, "export-png", "<file>", "Export selected sprite as PNG (requires --move, --sprite, --palette)");
     struct arg_file *pal = arg_file0("p", "palette", "<file>", "BK file for palette");
     struct arg_lit *play = arg_lit0(NULL, "play", "Play animation or sprite (requires --anim and --palette)");
     struct arg_int *scale = arg_int0(NULL, "scale", "<factor>", "Scales sprites (requires --play)");
     struct arg_lit *parse = arg_lit0(NULL, "parse", "Parse value (requires --key)");
     struct arg_end *end = arg_end(20);
     void *argtable[] = {help,  vers,  file,   new, move, all_moves, sprite, keylist, key,
-                        value, strip, output, pal, play, scale,     parse,  end};
+                        value, strip, output, export_png, pal, play, scale, parse, end};
     const char *progname = "aftool";
 
     // Make sure everything got allocated
@@ -789,6 +790,10 @@ int main(int argc, char *argv[]) {
             printf("Try '%s --help' for more information.\n", progname);
             goto exit_0;
         }
+    }
+    if(export_png->count > 0 && (move->count == 0 || sprite->count == 0 || pal->count == 0)) {
+        printf("--export-png requires --move, --sprite, and --palette\n");
+        goto exit_0;
     }
     if(file->count == 0 && new->count == 0) {
         printf("Either --file or --new argument required!\n");
@@ -855,6 +860,23 @@ int main(int argc, char *argv[]) {
         }
         sd_sprite *sp = sd_animation_get_sprite(sd_af_get_move(&af, move->ival[0])->animation, sprite->ival[0]);
 
+        if(export_png->count > 0) {
+            vga_palette *palette = sd_bk_get_palette(&bk, 0);
+            sd_vga_image image;
+            path png_path;
+            path_from_c(&png_path, export_png->filename[0]);
+            if(!palette || sd_sprite_vga_decode(&image, sp) != SD_SUCCESS) {
+                printf("Unable to decode sprite for PNG export.\n");
+                goto exit_2;
+            }
+            int export_result = sd_vga_image_to_png(&image, palette, &png_path);
+            sd_vga_image_free(&image);
+            if(export_result != SD_SUCCESS) {
+                printf("PNG export failed: %s\n", sd_get_error(export_result));
+            }
+            goto exit_2;
+        }
+
         // Handle arguments
         if(key->count > 0) {
             if(value->count > 0) {
@@ -904,7 +926,7 @@ int main(int argc, char *argv[]) {
                     if(value->count > 0) {
                         move_set_key(mv, ani, key->sval, key->count, value->sval[0]);
                     } else {
-                        printf("move %2d: ", i);
+                        printf("move %2u: ", i);
                         move_get_key(mv, ani, key->sval, key->count, parse->count);
                     }
                 } else {

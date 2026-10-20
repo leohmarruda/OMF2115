@@ -25,7 +25,6 @@
 #include "resources/sgmanager.h"
 #include "utils/allocator.h"
 #include "utils/c_array_util.h"
-#include "utils/c_string_util.h"
 #include "utils/log.h"
 #include "video/video.h"
 
@@ -177,7 +176,7 @@ void mechlab_free(scene *scene) {
     game_player *player1 = game_state_get_player(scene->gs, 0);
     // save the character file
     if(player1->chr != NULL && sg_save(player1->chr) != SD_SUCCESS) {
-        log_error("Failed to save pilot %s", str_c(&player1->chr->pilot.name));
+        log_error("Failed to save pilot %s", player1->chr->pilot.name);
     }
 
     for(unsigned i = 0; i < N_ELEMENTS(local->bg_obj); i++) {
@@ -306,7 +305,7 @@ void mechlab_tick(scene *scene, int paused) {
         game_player *player1 = game_state_get_player(scene->gs, 0);
         if(local->dashtype == DASHBOARD_NEW_PLAYER) {
             char select_photo[64];
-            unsafe_snprintf(select_photo, sizeof(select_photo), lang_get(224), str_c(&player1->pilot->name));
+            snprintf(select_photo, sizeof(select_photo), lang_get(224), player1->pilot->name);
             mechlab_select_dashboard(scene, DASHBOARD_SELECT_NEW_PIC);
             gui_frame_free(local->frame);
             gui_theme theme;
@@ -358,7 +357,7 @@ void mechlab_tick(scene *scene, int paused) {
             }
 
             if(sg_save(player1->chr) != SD_SUCCESS) {
-                log_error("Failed to save pilot %s", str_c(&player1->chr->pilot.name));
+                log_error("Failed to save pilot %s", player1->chr->pilot.name);
             }
             // force the character to reload because its just easier
 
@@ -458,14 +457,14 @@ void mechlab_select_dashboard(scene *scene, dashboard_type type) {
     }
 }
 
-bool mechlab_event(scene *scene, SDL_Event *event) {
+int mechlab_event(scene *scene, SDL_Event *event) {
     mechlab_local *local = scene_get_userdata(scene);
     game_player *player1 = game_state_get_player(scene->gs, 0);
     if(player1->ctrl->type == CTRL_TYPE_GAMEPAD ||
        (player1->ctrl->type == CTRL_TYPE_KEYBOARD && event->type == SDL_KEYDOWN &&
         keyboard_binds_key(player1->ctrl, event))) {
         // these events will be handled by polling
-        return false;
+        return 1;
     }
 
     if(local->dashtype == DASHBOARD_STATS && event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_e) {
@@ -476,7 +475,7 @@ bool mechlab_event(scene *scene, SDL_Event *event) {
             log_info("Replaying cutscene '%s'", player1->chr->bk_name);
             scene->gs->fight_stats.winner = -1;
             game_state_set_next(scene->gs, SCENE_TRN_CUTSCENE);
-            return true;
+            return 1;
         }
     }
 
@@ -557,7 +556,7 @@ void mechlab_input_tick(scene *scene) {
                     }
                 } else {
                     log_debug("sending input %d to new player dash", i->event_data.action);
-                    gui_frame_action(local->dashboard, i->event_data.action, i->source);
+                    gui_frame_action(local->dashboard, i->event_data.action);
                 }
 
             } else if(local->dashtype == DASHBOARD_SELECT_NEW_PIC && i->event_data.action == ACT_ESC) {
@@ -581,7 +580,7 @@ void mechlab_input_tick(scene *scene) {
                 gui_frame_set_root(local->frame, lab_menu_main_create(scene, found));
                 gui_frame_layout(local->frame);
             } else {
-                gui_frame_action(local->frame, i->event_data.action, i->source);
+                gui_frame_action(local->frame, i->event_data.action);
             }
         }
     } while((i = i->next) != NULL);

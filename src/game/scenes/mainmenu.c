@@ -47,20 +47,20 @@ void mainmenu_input_tick(scene *scene) {
     for(p = ev; p; p = p->next) {
         if(p->type == EVENT_TYPE_ACTION) {
             // Pass on the event
-            gui_frame_action(local->frame, p->event_data.action, p->source);
+            gui_frame_action(local->frame, p->event_data.action);
         }
     }
     controller_free_chain(ev);
 }
 
-bool mainmenu_event(scene *scene, SDL_Event *event) {
+int mainmenu_event(scene *scene, SDL_Event *event) {
     mainmenu_local *local = scene_get_userdata(scene);
     game_player *player1 = game_state_get_player(scene->gs, 0);
     if(player1->ctrl->type == CTRL_TYPE_GAMEPAD ||
        (player1->ctrl->type == CTRL_TYPE_KEYBOARD && event->type == SDL_KEYDOWN &&
         keyboard_binds_key(player1->ctrl, event))) {
         // these events will be handled by polling
-        return false;
+        return 1;
     }
 
     return gui_frame_event(local->frame, event);
@@ -148,15 +148,15 @@ int mainmenu_create(scene *scene) {
     scene_set_startup_cb(scene, mainmenu_startup);
 
     if(scene->gs->net_mode == NET_MODE_CLIENT) {
-        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
-        component_action(gui_frame_find(local->frame, NETWORK_CONNECT_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
-        component_action(gui_frame_find(local->frame, NETWORK_CONNECT_IP_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
+        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH);
+        component_action(gui_frame_find(local->frame, NETWORK_CONNECT_BUTTON_ID), ACT_PUNCH);
+        component_action(gui_frame_find(local->frame, NETWORK_CONNECT_IP_BUTTON_ID), ACT_PUNCH);
     } else if(scene->gs->net_mode == NET_MODE_SERVER) {
-        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
-        component_action(gui_frame_find(local->frame, NETWORK_LISTEN_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
+        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH);
+        component_action(gui_frame_find(local->frame, NETWORK_LISTEN_BUTTON_ID), ACT_PUNCH);
     } else if(scene->gs->net_mode == NET_MODE_LOBBY) {
-        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
-        component_action(gui_frame_find(local->frame, NETWORK_LOBBY_BUTTON_ID), ACT_PUNCH, CTRL_TYPE_KEYBOARD);
+        component_action(gui_frame_find(local->frame, NETWORK_BUTTON_ID), ACT_PUNCH);
+        component_action(gui_frame_find(local->frame, NETWORK_LOBBY_BUTTON_ID), ACT_PUNCH);
     }
 
     // clear it, so this only happens the first time

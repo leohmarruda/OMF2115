@@ -1,7 +1,10 @@
-#include "game/gui/textselector.h"
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "audio/audio.h"
 #include "controller/controller.h"
 #include "game/gui/text/text.h"
+#include "game/gui/textselector.h"
 #include "game/gui/widget.h"
 #include "utils/allocator.h"
 #include "utils/c_string_util.h"
@@ -9,6 +12,7 @@
 typedef struct text_selector {
     text *text;
     str title;
+    int ticks;
     int dir;
     int pos_;
     int *pos;
@@ -79,14 +83,13 @@ static void textselector_render(component *c) {
     } else {
         text_set_color(t->text, theme->text.inactive_color);
     }
-    const vec2i pos = component_get_pos(c);
-    text_draw(t->text, pos.x, pos.y);
+    text_draw(t->text, c->x, c->y);
 }
 
-static bool textselector_action(component *c, int action, int source) {
+static int textselector_action(component *c, int action) {
     text_selector *tb = widget_get_obj(c);
     if(vector_size(&tb->options) <= 1) {
-        return false;
+        return 0;
     }
     int old_pos = *tb->pos;
     int panning = 0;
@@ -109,9 +112,16 @@ static bool textselector_action(component *c, int action, int source) {
             tb->toggle(c, tb->userdata, *tb->pos);
         }
         audio_play_sound_simple(20, panning);
-        return true;
+        // reset ticks so text is bright
+        tb->ticks = 0;
+        return 0;
     }
-    return false;
+    return 1;
+}
+
+static void textselector_tick(component *c) {
+    text_selector *t = widget_get_obj(c);
+    t->ticks++;
 }
 
 int textselector_get_pos(const component *c) {
@@ -140,8 +150,7 @@ static void textselector_init(component *c, const gui_theme *theme) {
     text_selector *t = widget_get_obj(c);
     refresh(c);
     text_set_font(t->text, t->override_font != FONT_NONE ? t->override_font : theme->text.font);
-    const vec2i hint = component_get_size_hint(c);
-    if(hint.x < 0 && hint.y < 0) {
+    if(c->w_hint < 0 && c->h_hint < 0) {
         text_generate_layout(t->text);
         int text_width = text_get_layout_width(t->text);
         int text_height = text_get_layout_height(t->text);
@@ -176,6 +185,7 @@ component *textselector_create(const char *text, const char *help, textselector_
 
     widget_set_render_cb(c, textselector_render);
     widget_set_action_cb(c, textselector_action);
+    widget_set_tick_cb(c, textselector_tick);
     widget_set_free_cb(c, textselector_free);
     widget_set_init_cb(c, textselector_init);
     widget_set_layout_cb(c, textselector_layout);

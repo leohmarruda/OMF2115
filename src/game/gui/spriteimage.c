@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "game/gui/sizer.h"
 #include "game/gui/spriteimage.h"
 #include "game/gui/widget.h"
 #include "utils/allocator.h"
@@ -12,8 +13,7 @@ typedef struct spriteimage {
 
 static void spriteimage_render(component *c) {
     spriteimage *sb = widget_get_obj(c);
-    const vec2i pos = component_get_pos(c);
-    video_draw(sb->img, pos.x, pos.y);
+    video_draw(sb->img, c->x, c->y);
 }
 
 static void spriteimage_free(component *c) {
@@ -34,7 +34,9 @@ void spriteimage_set_owns_sprite(component *c, bool owns_sprite) {
 component *spriteimage_create(const surface *img) {
     component *c = widget_create();
     component_disable(c, 1);
-    component_set_supported(c, true, false, false);
+    c->supports_focus = 0;
+    c->supports_disable = 1;
+    c->supports_select = 0;
 
     spriteimage *sb = omf_calloc(1, sizeof(spriteimage));
     sb->img = img;

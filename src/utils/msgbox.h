@@ -11,8 +11,6 @@
 #ifndef MSGBOX_H
 #define MSGBOX_H
 
-#include "utils/compat.h"
-
 /**
  * @brief Display an error message box.
  * @details Shows a modal dialog with the formatted error message.
@@ -20,6 +18,6 @@
  * @param fmt Printf-style format string
  * @param ... Format arguments
  */
-void err_msgbox(const char *fmt, ...) ATTR_FORMAT_PRINTF(1, 2);
+void err_msgbox(const char *fmt, ...);
 
 #endif // MSGBOX_H
