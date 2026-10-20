@@ -1,3 +1,7 @@
+OMF2097/
+vcpkg_installed/
+project/OMF2097/
+omf3k/docs/mesh/*.fbx
 build/*.dll
 build/*.exe
 build/*.cmake
