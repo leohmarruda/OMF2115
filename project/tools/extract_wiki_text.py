@@ -41,7 +41,7 @@ class Article(HTMLParser):
 
 
 for name in sys.argv[1:]:
-    path = Path("omf3k/docs/OMF2097/omfwiki") / name
+    path = Path("project/docs/OMF2097/omfwiki") / name
     article = Article()
     article.feed(path.read_text(encoding="utf-8", errors="replace"))
     text = "".join(article.parts)

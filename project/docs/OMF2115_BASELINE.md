@@ -1,8 +1,8 @@
-# OMF3K source baseline — 2026-10-09
+# OMF2115 source baseline — 2026-10-09
 
 This is the first reproducible Windows baseline for the 3D fidelity work. It
 uses OpenOMF as the combat reference. The build outputs and copied original
-game data are local to the ignored `build/` and `omf3k/build/` directories.
+game data are local to the ignored `build/` and `project/build/` directories.
 
 ## Environment
 
@@ -25,7 +25,7 @@ checkout's `build/vcpkg_installed` directory.
 ```bat
 cmake -S . -B build/omf_debug_z7 -G Ninja ^
   -DCMAKE_TOOLCHAIN_FILE=C:/Users/leohm/vcpkg/scripts/buildsystems/vcpkg.cmake ^
-  -DVCPKG_INSTALLED_DIR=C:/Users/leohm/AI_projects/OMF3K/build/vcpkg_installed ^
+  -DVCPKG_INSTALLED_DIR=C:/Users/leohm/AI_projects/OMF2115/build/vcpkg_installed ^
   -DVCPKG_MANIFEST_MODE=OFF -DCMAKE_BUILD_TYPE=Debug ^
   -DCMAKE_C_FLAGS_DEBUG="/Z7 /Ob0 /Od /RTC1" ^
   -DBUILD_3D_PROTOTYPE=OFF -DBUILD_LANGUAGES=ON -DUSE_TESTS=OFF
@@ -45,7 +45,7 @@ From the Debug build directory, set `OPENOMF_RESOURCE_PATH`,
 `OPENOMF_STATE_PATH`, and `OPENOMF_CONFIG_PATH` to `.` and run, for example:
 
 ```bat
-openomf.exe --force-audio-backend=NULL --force-renderer=NULL --speed=10 -P C:/Users/leohm/AI_projects/OMF3K/rectests/JAG-CORNER-THROW.REC
+openomf.exe --force-audio-backend=NULL --force-renderer=NULL --speed=10 -P C:/Users/leohm/AI_projects/OMF2115/rectests/JAG-CORNER-THROW.REC
 ```
 
 ## Checks completed
@@ -58,7 +58,7 @@ openomf.exe --force-audio-backend=NULL --force-renderer=NULL --speed=10 -P C:/Us
 | `STADIUM-WALL-SPLAT.REC` | Passed, exit 0 |
 | `POWERPLANT-WALL-SPLAT.REC` | Passed, exit 0 |
 | Existing 3D prototype `--self-test` | Passed |
-| Stadium and Power Plant wall-state source traces | Passed; see [Stadium baseline](OMF3K_STADIUM_BASELINE.md) |
+| Stadium and Power Plant wall-state source traces | Passed; see [Stadium baseline](OMF2115_STADIUM_BASELINE.md) |
 | Complete Jaguar–Shadow live-source trace replay | Passed, 472 frames; winner declared at tick 376 |
 
 The `SHOULDFAIL.REC` fixture reached its expected assertion (`1994 != 2097`),

@@ -23,11 +23,11 @@ visible front and rear projection at the side-on fight camera.
 
 The model uses the prototype's Y-up coordinate system, with negative Z toward
 the opponent. It is a rigid-part blockout, not a skinned final model. See the
-[match review](../../../docs/OMF3K_MODEL_MATCH_REVIEW.md) for what the runtime
+[match review](../../../docs/OMF2115_MODEL_MATCH_REVIEW.md) for what the runtime
 pose rig and recorded match demonstrate and where they still differ.
 
 The user accepted this silhouette blockout for the prototype milestone on
 2026-10-14. Surface detail and animation polish remain open.
 
-Rebuild: `py -3 omf3k/robots/shadow/blockout/build.py` from the repository root.
-Run `py -3 omf3k/robots/build_rigged.py` to rebuild both rigid-joint glTFs.
+Rebuild: `py -3 project/robots/shadow/blockout/build.py` from the repository root.
+Run `py -3 project/robots/build_rigged.py` to rebuild both rigid-joint glTFs.

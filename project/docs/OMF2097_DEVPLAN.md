@@ -1,13 +1,13 @@
-# OMF3K — development plan
+# OMF2115 — development plan
 
 **Version:** 0.3  
 **Status:** Working implementation plan for the [game specification](OMF2097_3D_GAME_SPEC.md); current production focus is Jaguar and Shadow only.  
-**Story basis:** [OMF3K story treatment](OMF3K_LORE_v2.md)  
+**Story basis:** [OMF2115 story treatment](OMF2115_LORE_v2.md)  
 **Planning rule:** Each phase ends with a playable or inspectable artifact and a written decision. Dates and staffing are set after the vertical slice establishes actual production speed.
 
 ## 1. Intended outcome and execution order
 
-Deliver OMF3K as a 3D rendition of *One Must Fall 2097* with side-on combat,
+Deliver OMF2115 as a 3D rendition of *One Must Fall 2097* with side-on combat,
 separate pilot and HAR selection, recognizable original machines and arenas, a richer
 Ganymede story, improved Tournament career, and anime-influenced character
 sequences. OpenOMF remains the original-game baseline and the source for
@@ -34,7 +34,7 @@ list of remaining defects.
   arena hazards, game state, original-data loaders, Tournament/Mechlab flow,
   and a 2D-oriented OpenGL renderer.
 - `testing/` contains source tests, including parsers and a recording fixture.
-- `omf3k/prototype/main.c` is an SDL2/OpenGL side-on spike. Its basic
+- `project/prototype/main.c` is an SDL2/OpenGL side-on spike. Its basic
   opponent and provisional standalone combat values remain technical
   experiments, not production combat.
 - The prototype now has a source-driven Jaguar–Shadow live view and replay
@@ -56,7 +56,7 @@ list of remaining defects.
   current build outputs are local dependencies/artifacts, not game content.
   Keep these out of source commits and distributable packages.
 - A reproducible Windows Debug and Release build, headless OpenOMF replays,
-  and the prototype self-test are recorded in the [source baseline](OMF3K_BASELINE.md).
+  and the prototype self-test are recorded in the [source baseline](OMF2115_BASELINE.md).
   The source unit suite and a visible human-played reference match remain
   open baseline work.
 
@@ -131,7 +131,7 @@ is measured.
 Its higher-resolution robot and character sprites are also useful when the
 original sprites cannot resolve a silhouette, costume, face, or pose detail.
 Consult the matching remastered image during visual review, record its
-provenance, and assess its terms separately before copying artwork into OMF3K.
+provenance, and assess its terms separately before copying artwork into OMF2115.
 
 At B08, make a short side-by-side prototype or integration estimate for each
 candidate using the same Jaguar–Shadow match contract and reference traces.
@@ -325,12 +325,12 @@ status, becomes the first credible schedule for the full target.
 meshes, reproducible generators, and front, back, side, and fight-distance
 renders derived from their approved three-view references. The user accepted
 both silhouettes on 2026-10-14. The earlier
-[procedural blockout review](OMF3K_BLOCKOUT_REVIEW.md) is historical; its
+[procedural blockout review](OMF2115_BLOCKOUT_REVIEW.md) is historical; its
 pending editable-mesh decision is superseded by these assets.
 
 **B10 has a recorded fight-camera comparison, with live readability still
 open.** Both meshes run in the source-driven Jaguar–Shadow view. The
-[model match review](OMF3K_MODEL_MATCH_REVIEW.md) compares a 356-tick OpenOMF
+[model match review](OMF2115_MODEL_MATCH_REVIEW.md) compares a 356-tick OpenOMF
 recording and local punch/kick variants for reach, timing, facing, and
 readability. Source combat owns hits and timing. The prototype has rigid-joint
 glTF previews for idle, walk, jump, guard, punch, kick, hit, and each HAR's
@@ -341,7 +341,7 @@ Sampled close-range Jaguar standing punch, down punch, and kick contacts now
 fold the striking limb toward Shadow while preserving the long-range pose and
 source hit result. The actual down-punch trace confirms animation 30 hits at
 tick 129 (19 HP); its recovery tail still needs a longer fixture.
-The [signature move trace](OMF3K_SIGNATURE_MOVE_TRACE.md) now captures both
+The [signature move trace](OMF2115_SIGNATURE_MOVE_TRACE.md) now captures both
 moves at near and distant spacing. Their fighter poses and health changes
 replay. Version 4 of the source trace now includes active projectile objects;
 the 3D view uses their recorded positions for a cyan shot and a purple
@@ -359,7 +359,7 @@ sheet, and A06's asset ledger open in parallel.
 ## Related documents
 
 - [Game specification](OMF2097_3D_GAME_SPEC.md)
-- [Story treatment](OMF3K_LORE_v2.md)
+- [Story treatment](OMF2115_LORE_v2.md)
 - [Original game reference](OMF2097/OMF2097_REFERENCE.md)
 - [Milestone roadmap](ROADMAP.md)
 - [Existing prototype notes](../prototype/README.md)

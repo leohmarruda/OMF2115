@@ -3,13 +3,13 @@
 For every player-triggered Jaguar and Shadow animation it exports the original sprites,
 and for moves that appear in a recorded trace it captures the viewer at the first tick of
 each sprite, once with the blockout and once with OMF3K_MESHY=1. Output goes to
-omf3k/build/move-browser/ (ignored by git; it contains original game art). Open
-omf3k/build/move-browser/index.html in a browser.
+project/build/move-browser/ (ignored by git; it contains original game art). Open
+project/build/move-browser/index.html in a browser.
 
-    python omf3k/tools/generate_move_browser.py            # new captures only
-    python omf3k/prototype/generate_move_browser.py --refresh  # redo every capture
-    python omf3k/prototype/generate_move_browser.py --html-only
-    python omf3k/prototype/generate_move_browser.py --har 1 --animation 33   # one move
+    python project/tools/generate_move_browser.py            # new captures only
+    python project/prototype/generate_move_browser.py --refresh  # redo every capture
+    python project/prototype/generate_move_browser.py --html-only
+    python project/prototype/generate_move_browser.py --har 1 --animation 33   # one move
 """
 from __future__ import annotations
 
@@ -203,7 +203,7 @@ def build_data(moves, args):
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OMF3K move browser</title>
+<title>OMF2115 move browser</title>
 <style>
 :root{--bg:#0e1319;--panel:#171e27;--line:#2a3441;--text:#dbe4ee;--dim:#8b9bad;--accent:#58b6e8;
 --ok:#4fbf7a;--warn:#e0b341;--bad:#e0675c}
@@ -235,7 +235,7 @@ code{font:12px ui-monospace,Consolas,monospace;color:var(--dim);word-break:break
 #lb img{max-width:96vw;max-height:94vh;image-rendering:auto}
 @media (max-width:760px){.grid{grid-template-columns:60px repeat(3,minmax(0,1fr));gap:4px;padding:8px}}
 </style></head><body>
-<header><h1>OMF3K move browser</h1><div class="bar">
+<header><h1>OMF2115 move browser</h1><div class="bar">
 <select id="har"><option value="">Both HARs</option><option>Jaguar</option><option>Shadow</option></select>
 <select id="status"><option value="">Any status</option><option>authored</option><option>partial</option><option>generic</option></select>
 <label><input type="checkbox" id="traced"> only with a trace</label>

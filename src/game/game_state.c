@@ -10,7 +10,7 @@
 #ifdef OMF3K_SOURCE_TRACE
 #include "game/objects/har.h"
 #include "game/objects/projectile.h"
-#include "../../omf3k/prototype/live_input.h"
+#include "../../project/prototype/live_input.h"
 #endif
 #include "game/protos/object.h"
 #include "game/protos/scene.h"
@@ -125,7 +125,7 @@ static void omf3k_trace_match_tick(game_state *gs) {
                 fputs("tick,player,har,health,max_health,x,y,vx,vy,facing,state,move,animation,sprite,animation_tick,match_winner,hit_mask,block_mask,round_winner,projectiles\n",
                       omf3k_trace_file);
             } else {
-                log_error("Unable to open OMF3K trace file: %s", trace_path);
+                log_error("Unable to open OMF2115 trace file: %s", trace_path);
             }
         }
 #ifdef _WIN32
@@ -137,7 +137,7 @@ static void omf3k_trace_match_tick(game_state *gs) {
                 omf3k_shared_state = MapViewOfFile(omf3k_state_mapping, FILE_MAP_ALL_ACCESS, 0, 0,
                                                    sizeof(Omf3kLiveState));
             }
-            if(!omf3k_shared_state) log_error("Unable to create OMF3K live state channel.");
+            if(!omf3k_shared_state) log_error("Unable to create OMF2115 live state channel.");
         }
 #endif
         if(omf3k_trace_file
@@ -540,11 +540,11 @@ int game_state_create(game_state *gs, const engine_init_flags *init_flags) {
         }
         _setup_ai(gs, 1);
         if(scene_create(gs->sc, gs, nscene)) {
-            log_error("Error while loading OMF3K live scene.");
+            log_error("Error while loading OMF2115 live scene.");
             goto error_0;
         }
         if(arena_create(gs->sc)) {
-            log_error("Error while creating OMF3K live arena.");
+            log_error("Error while creating OMF2115 live arena.");
             goto error_1;
         }
     } else if(path_is_set(&init_flags->rec_file) > 0 && init_flags->playback == 1) {

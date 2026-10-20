@@ -96,7 +96,7 @@ assets. All range and late-entry variants ended normally with exit code 0.
 
 The 3D blockout now follows animation 42's observed sprite sequence rather
 than a generic sine curve. Exported Jaguar sprites 0–3 in the local
-`omf3k/docs/OMF2097/poses/jaguar/punch-frames/` directory guide four authored arm
+`project/docs/OMF2097/poses/jaguar/punch-frames/` directory guide four authored arm
 poses. OpenOMF's completed tick selects the pose; the renderer does not change
 hit timing or damage.
 
@@ -119,8 +119,8 @@ silhouette and the other Jaguar and Shadow moves still need their own fits.
 Animation 41 now selects four authored front-leg poses from source sprite IDs.
 The knee chambers, extends, holds, and retracts with the recorded source
 sequence; this changes presentation only. The local source references are in
-`omf3k/build/pose-reference/jaguar/41/`, and fight-camera captures are in
-`omf3k/build/omf3d_jaguar_kick_126.bmp`, `_128.bmp`, `_130.bmp`, and `_139.bmp`.
+`project/build/pose-reference/jaguar/41/`, and fight-camera captures are in
+`project/build/omf3d_jaguar_kick_126.bmp`, `_128.bmp`, `_130.bmp`, and `_139.bmp`.
 
 | Completed ticks | Sprite | Blockout leg pose |
 | --- | ---: | --- |
@@ -138,7 +138,7 @@ higher-resolution kick frames in
 [OMF 2097 Remastered](https://github.com/Jared-woodruff/OMF-2097-Remastered).
 The HD frames show a higher knee and toe at full extension, which informed
 the revised sprite-3 joint fit. The Remastered blue armor and palette are not
-the OMF3K design reference; the approved three-view sheets remain authoritative.
+the OMF2115 design reference; the approved three-view sheets remain authoritative.
 
 To rebuild the local variants, use `rectool` on a copy of `rectests/6P.REC`:
 insert a `set` assertion at tick 123 for HAR 2's x position to 88, truncate
@@ -167,8 +167,8 @@ HD Jaguar atlas frame in the local sibling `OMF-2097-Remastered` project.
 Those frames show a forward body lean and split-leg lunge rather than a
 stationary standing punch. The 3D blockout now leans from the hips and spreads
 the legs through the four authored frames. The fight-camera check used a
-synthetic sprite sequence in `omf3k/build/jaguar-down-punch-preview.csv`, with its
-final capture in `omf3k/build/omf3d_source_replay_capture.bmp`. This checks visual
+synthetic sprite sequence in `project/build/jaguar-down-punch-preview.csv`, with its
+final capture in `project/build/omf3d_source_replay_capture.bmp`. This checks visual
 selection; the source timing is now measured separately below. The model is
 still a blockout, and the approved Jaguar three-view sheets control its armor
 design.
@@ -184,8 +184,8 @@ player 2 was hit. This is one close-range contact sample, not a range or full
 recovery measurement: the trace ends at tick 134 while animation 30 is still
 active. The 3D view now folds Jaguar's down-punch arm toward a nearby opponent
 at contact, like its standing punch fit. Local before/after captures are
-`omf3k/build/omf3d_jag_down_punch_tick129.png` and
-`omf3k/build/omf3d_jag_down_punch_contact_tick129.png`.
+`project/build/omf3d_jag_down_punch_tick129.png` and
+`project/build/omf3d_jag_down_punch_contact_tick129.png`.
 
 The side-on prototype uses a 60 Hz simulation and world units. Its current
 light punch lasts 0.27 seconds (about 16 prototype ticks), checks contact
@@ -207,7 +207,7 @@ OpenOMF's `-P` option. The probe also observes live arena matches and flushes
 each complete fighter pair for the 3D follower. The normal build leaves the
 probe disabled. The full
 Windows build setup and local data location are recorded in
-`omf3k/docs/OMF3K_BASELINE.md`.
+`project/docs/OMF2115_BASELINE.md`.
 
 ## Capture still needed
 
@@ -215,7 +215,7 @@ Measure kick range and guard response; repeat punch range and jump behavior
 against other pilots, HARs, poses, and settings before treating these
 Jaguar–Shadow values as general rules. A complete source-driven Jaguar–Shadow
 result and Stadium wall-response captures are now in the
-[Stadium and full-match baseline](OMF3K_STADIUM_BASELINE.md); a fixed-input
+[Stadium and full-match baseline](OMF2115_STADIUM_BASELINE.md); a fixed-input
 recording and human visual review remain open.
 Keep local replay outputs in the ignored build folder until asset rights are
 resolved. Only then adapt Jaguar's full move set.

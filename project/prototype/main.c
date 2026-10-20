@@ -914,7 +914,7 @@ static void label(float x,float y,float size,const char *s,float r,float g,float
 static void selection_hud(void) {
     quad(-1,-1,2,2,.015f,.025f,.065f);
     quad(-.78f,.62f,1.56f,.20f,.04f,.10f,.18f);
-    label(-.70f,.71f,.018f,"OMF3K / CHOOSE YOUR FIGHTER",.65f,.92f,1);
+    label(-.70f,.71f,.018f,"OMF2115 / CHOOSE YOUR FIGHTER",.65f,.92f,1);
     label(-.72f,.43f,.012f,"UP DOWN ROBOT",.55f,.70f,.84f);
     label(-.72f,.34f,.012f,"LEFT RIGHT PILOT",.55f,.70f,.84f);
     label(-.72f,.18f,.011f,"ROBOT",.48f,.60f,.72f);
@@ -1046,7 +1046,7 @@ static void hud(void) {
         const char *pose[]={"IDLE","PUNCH","KICK","GUARD","CROUCH",
                             "WALK","JUMP","HIT","SPECIAL"};
         quad(-1,.80f,2,.20f,.02f,.04f,.10f);
-        label(-.92f,.94f,.014f,"OMF3K / MODEL BLOCKOUTS",.72f,.90f,1);
+        label(-.92f,.94f,.014f,"OMF2115 / MODEL BLOCKOUTS",.72f,.90f,1);
         label(-.92f,.85f,.012f,view,.60f,.95f,.67f);
         label(-.12f,.85f,.012f,pose[model_preview_pose],.60f,.95f,.67f);
         label(-.67f,-.64f,.015f,"JAGUAR",.80f,.87f,.94f);
@@ -1057,8 +1057,8 @@ static void hud(void) {
         return;
     }
     quad(-1,.83f,2,.17f,.02f,.04f,.10f);
-    label(-.94f,.95f,.0145f,source_follow_mode ? "OMF3K / LIVE SOURCE" :
-          (source_replay_mode ? "OMF3K / SOURCE REPLAY" : "OMF3K / SIDE ON SPIKE"),
+    label(-.94f,.95f,.0145f,source_follow_mode ? "OMF2115 / LIVE SOURCE" :
+          (source_replay_mode ? "OMF2115 / SOURCE REPLAY" : "OMF2115 / SIDE ON SPIKE"),
           .62f,.89f,.96f);
     if(phase==1) {
         quad(-.94f,.78f,.78f,.035f,.14f,.18f,.25f);
@@ -1144,7 +1144,7 @@ static void hud(void) {
     } else {
         quad(-.78f,-.39f,1.56f,.65f,.025f,.045f,.10f);
         if(phase==0) {
-            label(-.68f,.15f,.021f,"OMF3K",.74f,.94f,1);
+            label(-.68f,.15f,.021f,"OMF2115",.74f,.94f,1);
             label(-.68f,.00f,.015f,source_follow_mode ? "LIVE SOURCE VIEW" :
                   "SIDE ON FIGHTING SPIKE",.85f,.9f,.96f);
             label(-.68f,-.11f,.015f,source_follow_mode ? "STARTING OPENOMF MATCH" :
@@ -1176,14 +1176,14 @@ static GLuint make_shader(GLenum type,const char *source) {
     if(!ok) { char log[1024]; glGetShaderInfoLog(s,sizeof(log),NULL,log); fprintf(stderr,"Shader: %s\n",log); exit(1); }
     return s;
 }
-// Captures go to omf3k/build, next to the files the OMF3K tools generate, not into OpenOMF's build tree.
+// Captures go to project/build, next to the files the OMF2115 tools generate, not into OpenOMF's build tree.
 static void ensure_capture_dir(void) {
 #ifdef _WIN32
-    _mkdir("omf3k");
-    _mkdir("omf3k/build");
+    _mkdir("project");
+    _mkdir("project/build");
 #else
-    mkdir("omf3k",0755);
-    mkdir("omf3k/build",0755);
+    mkdir("project",0755);
+    mkdir("project/build",0755);
 #endif
 }
 
@@ -1283,8 +1283,8 @@ int main(int argc,char **argv) {
     if(!selection_mode && !model_preview_mode && !smoke && !capture && !sandbox && !source_check && !source_replay_mode) {
         // Real fights come from OpenOMF (the original-game engine). The built-in combat
         // loop is a provisional placeholder kept only for rendering and self-tests.
-        fputs("OMF3K fights run on the OpenOMF engine. Start one with:\n"
-              "  powershell -ExecutionPolicy Bypass -File omf3k/prototype/run-live-jaguar.ps1\n"
+        fputs("OMF2115 fights run on the OpenOMF engine. Start one with:\n"
+              "  powershell -ExecutionPolicy Bypass -File project/prototype/run-live-jaguar.ps1\n"
               "Other modes: --source-live trace.csv | --source-replay trace.csv | --source-replay-check trace.csv\n"
               "             --model-preview | --select selection.txt | --self-test | --sandbox (provisional non-OMF combat)\n",stderr);
         return 1;
@@ -1364,7 +1364,7 @@ int main(int argc,char **argv) {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS,1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES,4);
-    SDL_Window *window=SDL_CreateWindow("OMF3K / PROTOTYPE",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
+    SDL_Window *window=SDL_CreateWindow("OMF2115 / PROTOTYPE",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
                                        WIDTH,HEIGHT,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE|
                                        ((smoke || capture || source_capture || model_preview_capture) ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN));
     if(!window) { fprintf(stderr,"Window: %s\n",SDL_GetError()); SDL_Quit(); return 1; }
@@ -1585,17 +1585,17 @@ int main(int argc,char **argv) {
         bool capture_now=capture || (source_capture && (!source_follow_mode ||
                          (source_replay.count && source_replay.frames[source_replay_index].tick>=capture_tick)));
         if(model_preview_capture) {
-            const char *paths[]={"omf3k/build/omf3d_model_side.bmp","omf3k/build/omf3d_model_front.bmp",
-                                 "omf3k/build/omf3d_model_back.bmp","omf3k/build/omf3d_model_punch.bmp",
-                                 "omf3k/build/omf3d_model_kick.bmp","omf3k/build/omf3d_model_guard.bmp",
-                                 "omf3k/build/omf3d_model_crouch.bmp","omf3k/build/omf3d_model_walk.bmp",
-                                 "omf3k/build/omf3d_model_jump.bmp","omf3k/build/omf3d_model_hit.bmp",
-                                 "omf3k/build/omf3d_model_special.bmp"};
+            const char *paths[]={"project/build/omf3d_model_side.bmp","project/build/omf3d_model_front.bmp",
+                                 "project/build/omf3d_model_back.bmp","project/build/omf3d_model_punch.bmp",
+                                 "project/build/omf3d_model_kick.bmp","project/build/omf3d_model_guard.bmp",
+                                 "project/build/omf3d_model_crouch.bmp","project/build/omf3d_model_walk.bmp",
+                                 "project/build/omf3d_model_jump.bmp","project/build/omf3d_model_hit.bmp",
+                                 "project/build/omf3d_model_special.bmp"};
             capture_ok=save_frame_bmp(paths[model_preview_capture_index]);
             if(!capture_ok) fprintf(stderr,"Could not save %s: %s\n",
                                     paths[model_preview_capture_index],SDL_GetError());
         } else if(capture_now) {
-            const char *path=source_capture ? "omf3k/build/omf3d_source_replay_capture.bmp" : "omf3k/build/omf3d_sideon_capture.bmp";
+            const char *path=source_capture ? "project/build/omf3d_source_replay_capture.bmp" : "project/build/omf3d_sideon_capture.bmp";
             capture_ok=save_frame_bmp(path);
             if(!capture_ok) fprintf(stderr,"Could not save %s: %s\n",path,SDL_GetError());
         }
@@ -1657,9 +1657,9 @@ int main(int argc,char **argv) {
                             profile_frames,slow_frames,max_frame_ms,max_input_ms,max_poll_ms,max_draw_ms,
                             max_build_ms,max_upload_ms,max_gpu_ms,max_swap_ms,source_gaps,max_source_gap_ms,max_tick_advance);
     if(smoke) puts("3D prototype OpenGL smoke check OK");
-    if(capture && capture_ok) puts("Saved omf3k/build/omf3d_sideon_capture.bmp");
-    if(source_capture && capture_ok) puts("Saved omf3k/build/omf3d_source_replay_capture.bmp");
+    if(capture && capture_ok) puts("Saved project/build/omf3d_sideon_capture.bmp");
+    if(source_capture && capture_ok) puts("Saved project/build/omf3d_source_replay_capture.bmp");
     if(model_preview_capture && capture_ok)
-        puts("Saved omf3k/build/omf3d_model_{side,front,back,punch,kick,guard,crouch,walk,jump,hit,special}.bmp");
+        puts("Saved project/build/omf3d_model_{side,front,back,punch,kick,guard,crouch,walk,jump,hit,special}.bmp");
     return capture_ok ? 0 : 1;
 }

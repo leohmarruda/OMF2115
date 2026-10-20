@@ -24,7 +24,7 @@ do not establish the generator's intent or approve either FBX for production.
 Record Meshy asset terms/provenance before moving an adapted version into a
 distributable game package. The [original pose gallery](../OMF2097/poses/index.md) and
 [higher-resolution Remastered captures](../Remastered/README.md) remain motion
-and silhouette references alongside the approved OMF3K model views.
+and silhouette references alongside the approved OMF2115 model views.
 
 ![Blue Robot Mascot neutral geometry preview](previews/robot-mascot-front.png)
 
@@ -34,11 +34,11 @@ and silhouette references alongside the approved OMF3K model views.
 
 The full import process and its pitfalls are in [IMPORT_PROCESS.md](IMPORT_PROCESS.md).
 
-`py -3 omf3k/tools/generate_meshy_meshes.py [--debug <dir>]` splits the
+`py -3 project/tools/generate_meshy_meshes.py [--debug <dir>]` splits the
 Robot Mascot (Jaguar) and Rocket Jester (Shadow) into the prototype's rig groups by
 nearest bone, stands the spine up and hangs the arms and legs in the blockout rest
 pose, decimates by vertex clustering (about 20k triangles) and
-writes `omf3k/prototype/meshy_meshes.h`. After rebuilding `omf3d_prototype`, set
+writes `project/prototype/meshy_meshes.h`. After rebuilding `omf3d_prototype`, set
 `OMF3K_MESHY=1` to render it in place of Jaguar's blockout, for example with
 `--model-preview-capture`. Without the variable the blockout is used.
 

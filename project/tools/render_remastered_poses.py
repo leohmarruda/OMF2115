@@ -80,7 +80,7 @@ def render_extra_robots(mod_path: Path, output: Path) -> tuple[list[dict[str, ob
                     "atlas_page": f"{mod_path.name}:{source}",
                     "atlas_x": "", "atlas_y": "",
                 })
-            lines.extend(["", "The approved OMF3K robot designs remain separate from these Remastered references."])
+            lines.extend(["", "The approved OMF2115 robot designs remain separate from these Remastered references."])
             (folder / "index.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
             master_rows.append(
                 f"| {slug.title()} (Remastered) | ![{slug} idle]({slug}/01-idle.png) | "
@@ -92,8 +92,8 @@ def render_extra_robots(mod_path: Path, output: Path) -> tuple[list[dict[str, ob
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=ROOT / "omf3k/docs/OMF2097/poses")
-    parser.add_argument("--output", type=Path, default=ROOT / "omf3k/docs/Remastered/poses")
+    parser.add_argument("--source", type=Path, default=ROOT / "project/docs/OMF2097/poses")
+    parser.add_argument("--output", type=Path, default=ROOT / "project/docs/Remastered/poses")
     parser.add_argument("--hd-root", type=Path,
                         default=ROOT.parent / "OMF-2097-Remastered/public/hd")
     parser.add_argument("--extras-mod", type=Path,
@@ -169,7 +169,7 @@ def main() -> None:
                         "The original eleven robots were matched by pixel fingerprint; "
                         "Glacier, Tempest, Helix, and Spectre come from Remastered's optional "
                         "new-robots mod. These are pose and detail references; their colors and "
-                        "armor styling may differ from the approved OMF3K designs. The images "
+                        "armor styling may differ from the approved OMF2115 designs. The images "
                         "stay in this locally ignored documentation folder.")
             body = "\n".join(lines) + "\n"
             body = body.replace("\n\nA full 3D turnaround requires",
@@ -185,7 +185,7 @@ def main() -> None:
             body = body.replace("Matched Remastered HD side-view frames matched to",
                                 "Remastered HD side-view frames matched to")
             body = body.replace("These are reference images for redesign, not improved artwork.",
-                                "These are pose and detail references, not approved OMF3K designs.")
+                                "These are pose and detail references, not approved OMF2115 designs.")
             body = body.replace("Original game data stays local in the ignored build folder.",
                                 "The images stay local in the ignored build folder.")
             body = body.replace("Original game data stays local in this ignored documentation folder.",

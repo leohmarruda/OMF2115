@@ -1,12 +1,12 @@
-"""Where everything lives, for the OMF3K tools.
+"""Where everything lives, for the OMF2115 tools.
 
-    omf3k/prototype   C sources of the 3D viewer, with the tables generated for it next to them
-    omf3k/tools       Python tools (this folder)
-    omf3k/data        hand-kept catalogs: pose_catalog.csv, pose_sprite_groups.csv, move_names.csv
-    omf3k/web         page templates for the generated HTML tools
-    omf3k/scripts     PowerShell launchers
-    omf3k/docs        documentation
-    omf3k/build       everything the tools generate (ignored by git)
+    project/prototype   C sources of the 3D viewer, with the tables generated for it next to them
+    project/tools       Python tools (this folder)
+    project/data        hand-kept catalogs: pose_catalog.csv, pose_sprite_groups.csv, move_names.csv
+    project/web         page templates for the generated HTML tools
+    project/scripts     PowerShell launchers
+    project/docs        documentation
+    project/build       everything the tools generate (ignored by git)
     build/            OpenOMF's own CMake and vcpkg trees, with the exes and the recorded traces
 
 Tools get their locations from here instead of computing them, so a folder can move in one place.
@@ -14,15 +14,15 @@ Tools get their locations from here instead of computing them, so a folder can m
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
-OMF3K = TOOLS.parent
-ROOT = OMF3K.parent                                  # repository root
+PROJECT = TOOLS.parent
+ROOT = PROJECT.parent                                  # repository root
 
-PROTOTYPE = OMF3K / "prototype"
-DATA = OMF3K / "data"
-WEB = OMF3K / "web"
-SCRIPTS = OMF3K / "scripts"
-DOCS = OMF3K / "docs"
-ARTIFACTS = OMF3K / "build"                          # generated files, captures, reference images
+PROTOTYPE = PROJECT / "prototype"
+DATA = PROJECT / "data"
+WEB = PROJECT / "web"
+SCRIPTS = PROJECT / "scripts"
+DOCS = PROJECT / "docs"
+ARTIFACTS = PROJECT / "build"                          # generated files, captures, reference images
 
 CMAKE_BUILD = ROOT / "build"                         # OpenOMF's CMake and vcpkg build trees
 VIEWER_DIR = CMAKE_BUILD / "omf_debug_z7"            # omf3d_prototype.exe, aftool.exe, rectool.exe, openomf.exe

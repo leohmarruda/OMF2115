@@ -1,5 +1,5 @@
 param(
-    [string]$OutputDirectory = 'omf3k/docs/OMF2097/poses/jaguar'
+    [string]$OutputDirectory = 'project/docs/OMF2097/poses/jaguar'
 )
 
 $ErrorActionPreference = 'Stop'

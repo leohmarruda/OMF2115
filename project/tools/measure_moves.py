@@ -12,8 +12,8 @@ Outputs (local, in build/omf_trace_z7/moves/): one .REC/.csv per run plus
 summary.csv and summary.md.
 
 Usage (repository root):
-    py -3 omf3k/prototype/measure_moves.py            # all moves
-    py -3 omf3k/prototype/measure_moves.py --har jaguar --move 41
+    py -3 project/prototype/measure_moves.py            # all moves
+    py -3 project/prototype/measure_moves.py --har jaguar --move 41
 """
 from __future__ import annotations
 

@@ -7,10 +7,10 @@ labels the limbs with bone-length rules, estimates a missing elbow or knee by tw
 maps the joints into the rig's (y, z) plane, and writes proposed pose_catalog rows plus an
 overlay image per sprite for checking by eye.
 
-    python omf3k/prototype/fit_poses.py --har 0 --animation 42          # one move
-    python omf3k/prototype/fit_poses.py --har 0 --all                    # every player-triggered move
+    python project/prototype/fit_poses.py --har 0 --animation 42          # one move
+    python project/prototype/fit_poses.py --har 0 --all                    # every player-triggered move
 
-Proposals go to omf3k/build/pose-fit/proposals.csv (same columns as pose_catalog.csv); nothing is
+Proposals go to project/build/pose-fit/proposals.csv (same columns as pose_catalog.csv); nothing is
 written to pose_catalog.csv. Review the overlays first.
 """
 from __future__ import annotations

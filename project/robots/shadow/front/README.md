@@ -1,8 +1,8 @@
 # Shadow front-view redesigns
 
-The selected final front and back pair is now recorded as Shadow's [canonical OMF3K modeling reference](../canonical/README.md).
+The selected final front and back pair is now recorded as Shadow's [canonical OMF2115 modeling reference](../canonical/README.md).
 
-Five improved Shadow concepts for OMF3K 3D modeling, generated from the original *One Must Fall 2097* Shadow [idle](../../../docs/OMF2097/poses/shadow/01-idle.png), [victory](../../../docs/OMF2097/poses/shadow/12-victory.png), [punch](../../../docs/OMF2097/poses/shadow/07-punch.png), and [special](../../../docs/OMF2097/poses/shadow/14-special.png) sprites.
+Five improved Shadow concepts for OMF2115 3D modeling, generated from the original *One Must Fall 2097* Shadow [idle](../../../docs/OMF2097/poses/shadow/01-idle.png), [victory](../../../docs/OMF2097/poses/shadow/12-victory.png), [punch](../../../docs/OMF2097/poses/shadow/07-punch.png), and [special](../../../docs/OMF2097/poses/shadow/14-special.png) sprites.
 
 All five explore a frontal neutral pose and retain Shadow's slim frame, compact silver head with green visor, swept shoulders, small green chest light, long limbs, and claw-like hands. They are concepts, not yet an approved modeling reference.
 

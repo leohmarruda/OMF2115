@@ -1,7 +1,7 @@
 #include "controller/keyboard.h"
 #include "utils/allocator.h"
 #include "utils/log.h"
-#include "../../omf3k/prototype/live_input.h"
+#include "../../project/prototype/live_input.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

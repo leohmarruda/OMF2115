@@ -5,9 +5,9 @@ fit_poses.py), the pose already authored in pose_catalog.csv, or a rest-pose def
 which has no joint markers). Drag the joints to match the sprite, tick the parts the pose
 overrides, mark the sprite reviewed, then export a CSV and merge it:
 
-    python omf3k/tools/generate_pose_editor.py        # writes omf3k/build/pose-editor/index.html
+    python project/tools/generate_pose_editor.py        # writes project/build/pose-editor/index.html
     (edit in the browser, then "Download pose rows")
-    python omf3k/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv
+    python project/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv
 
 One entry is made per group of animations that share sprites (sprite_duplicates.py); an
 exported row is applied to every player-triggered animation in the group, never to reaction
@@ -45,7 +45,7 @@ REFERENCE = {1: {"down": (15, 0), "standing": (16, 0)}}
 DOWN_RATIO = 0.85
 # OMF 2097 Remastered's HD atlas, a sibling checkout. Its frames match the original sprites exactly by
 # fingerprint (match_remastered_frames.py) at 5x horizontal and 6x vertical scale. The crops are local
-# reference material under omf3k/build/ and are not part of the repository.
+# reference material under project/build/ and are not part of the repository.
 HD_ROOT = paths.REMASTERED_HD
 HD_OUT = OUT / "hd"
 _hd = {"index": None, "pages": {}}

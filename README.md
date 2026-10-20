@@ -59,12 +59,12 @@ Contact
 -------
 Discord: https://discord.gg/7CPPzab
 
-OMF3K
+OMF2115
 -----
 
-OMF3K is the planned 3D adaptation of One Must Fall 2097. This checkout
-keeps its OMF3K work together in [omf3k](omf3k/README.md): project plans,
+OMF2115 is the planned 3D adaptation of One Must Fall 2097. This checkout
+keeps its OMF2115 work together in [project](project/README.md): project plans,
 the Jaguar and Shadow modeling references, and an experimental side-on
-[3D prototype](omf3k/prototype/README.md) driven by OpenOMF combat. The
-[development plan](omf3k/docs/OMF2097_DEVPLAN.md) tracks the next build and
+[3D prototype](project/prototype/README.md) driven by OpenOMF combat. The
+[development plan](project/docs/OMF2097_DEVPLAN.md) tracks the next build and
 validation gates.

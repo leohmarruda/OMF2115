@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     struct arg_int *port = arg_int0("p", "port", "<port>", "Port to connect or listen (default: 2097)");
     struct arg_file *play = arg_file0("P", "play", "<file>", "Play an existing recfile");
     struct arg_file *rec = arg_file0("R", "rec", "<file>", "Record a new recfile");
-    struct arg_lit *omf3k_live = arg_lit0(NULL, "omf3k-live", "Start the OMF3K Jaguar versus Shadow live experiment");
+    struct arg_lit *omf3k_live = arg_lit0(NULL, "omf3k-live", "Start the OMF2115 Jaguar versus Shadow live experiment");
     struct arg_lit *warp = arg_lit0(NULL, "warp", "run the game at warp speed");
     struct arg_int *speed = arg_int0(NULL, "speed", "<speed>", "game speed to use: 1-10");
     struct arg_str *log_level = arg_str0(NULL, "log-level", "<level>", "Log level (DEBUG, INFO, WARN, ERROR)");

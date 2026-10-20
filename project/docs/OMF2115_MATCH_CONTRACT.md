@@ -1,4 +1,4 @@
-# OMF3K match state and presentation boundary (spike draft)
+# OMF2115 match state and presentation boundary (spike draft)
 
 The source-driven replay and live views now follow OpenOMF combat ticks. This
 contract records the state the 3D presentation layer receives and the events
@@ -46,9 +46,9 @@ A local live experiment sends 3D-window key states to OpenOMF's controller
 and follows its completed ticks, so source combat logic resolves movement and
 attacks. Do not infer
 move timings from the 3D meshes.
-Initial Jaguar measurements are in `omf3k/docs/OMF3K_JAGUAR_BASELINE.md`.
+Initial Jaguar measurements are in `project/docs/OMF2115_JAGUAR_BASELINE.md`.
 
-`omf3k/prototype/main.c` now reads the exported CSV as a source-driven replay
+`project/prototype/main.c` now reads the exported CSV as a source-driven replay
 view. It maps the source arena's x=20..300 and y=190 floor to placeholder 3D
 robot positions and uses source facing, health, and animation IDs for display.
 The view advances one completed source tick at a time and does not call its
@@ -59,7 +59,7 @@ remain future work.
 
 ## Current spike deviations to measure
 
-`omf3k/prototype/main.c` currently uses a fixed 60 Hz simulation, authored
+`project/prototype/main.c` currently uses a fixed 60 Hz simulation, authored
 placeholder robots, simple distance/height hit checks, and provisional
 movement, jump, damage, stun, and guard values. `J` and `K` are punch/kick,
 `W` jumps, and holding back guards while grounded. These are usability

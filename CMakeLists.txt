@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Options
 OPTION(USE_TESTS "Build unittests" OFF)
-OPTION(OMF3K_SOURCE_TRACE "Enable opt-in OMF3K source match CSV tracing" OFF)
+OPTION(OMF3K_SOURCE_TRACE "Enable opt-in OMF2115 source match CSV tracing" OFF)
 OPTION(USE_TOOLS "Build tools" OFF)
 OPTION(USE_LIBPNG "Build with libpng support" ON)
 OPTION(USE_SANITIZERS "Enable Asan and Ubsan" OFF)
@@ -430,8 +430,8 @@ target_link_libraries(openomf PRIVATE openomf::argtable openomf::zip openomf::SD
 # A separate experimental 3D slice; the original game and its data path are untouched.
 option(BUILD_3D_PROTOTYPE "Build the standalone 3D combat/story prototype" ON)
 if(BUILD_3D_PROTOTYPE)
-    add_executable(omf3d_prototype omf3k/prototype/main.c omf3k/prototype/source_replay.c
-                                   omf3k/prototype/pose_catalog.c)
+    add_executable(omf3d_prototype project/prototype/main.c project/prototype/source_replay.c
+                                   project/prototype/pose_catalog.c)
     target_link_libraries(omf3d_prototype PRIVATE openomf::SDL2main openomf::epoxy)
     if(NOT WIN32)
         target_link_libraries(omf3d_prototype PRIVATE m)

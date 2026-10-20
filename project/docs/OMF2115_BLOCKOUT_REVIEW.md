@@ -3,7 +3,7 @@
 **Historical review:** this documents the earlier procedural silhouettes.
 Editable Jaguar and Shadow blockouts later replaced them and were accepted for
 the prototype milestone on 2026-10-14. See the
-[current model match review](OMF3K_MODEL_MATCH_REVIEW.md) for the present
+[current model match review](OMF2115_MODEL_MATCH_REVIEW.md) for the present
 status and recorded-match findings.
 
 This is a visual review of the then-current procedural blockouts, not approval of final
@@ -22,7 +22,7 @@ robots at the same display scale. The fight-camera captures are
 [Jaguar punch, tick 128](../build/omf3d_review_tick_128_updated.bmp), and
 [recovery, tick 131](../build/omf3d_review_tick_131_updated.bmp). The match images
 come from `--source-replay ... --capture-tick N`; they do not change source
-combat. Generated captures stay in the ignored local `omf3k/build/` folder.
+combat. Generated captures stay in the ignored local `project/build/` folder.
 
 ## Initial findings and corrections
 

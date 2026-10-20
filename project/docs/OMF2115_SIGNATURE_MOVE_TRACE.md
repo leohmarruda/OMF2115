@@ -4,7 +4,7 @@ Four local OpenOMF recordings compare Jaguar's concussion cannon (animation
 21) and Shadow Punch (animation 23) at near and distant spacing. The fixtures
 are derived from `rectests/6P.REC`; original files are unchanged. They run at
 speed 10 with the null renderer and audio backend. The `.REC`, CSV, and BMP
-outputs are local in the ignored `build/` (traces) and `omf3k/build/` (captures) directories.
+outputs are local in the ignored `build/` (traces) and `project/build/` (captures) directories.
 
 | Move and fixture | Start spacing at tick 126 | Source animation | First enemy health change | 3D capture |
 | --- | ---: | --- | --- | --- |
@@ -34,7 +34,7 @@ blockout from those object positions. Compare the [Jaguar shot in flight](../bui
 [Jaguar near impact](../build/mesh-match-ticks/jag-projectile-hit.bmp),
 [Shadow projection in flight](../build/mesh-match-ticks/shadow-projection-flight.bmp),
 and [Shadow near impact](../build/mesh-match-ticks/shadow-projection-hit.bmp).
-These are local `omf3k/build/` captures. The shapes are placeholders; their source
+These are local `project/build/` captures. The shapes are placeholders; their source
 travel positions and animation transitions are now visible and replayable.
 
 The current visual pass replaces Jaguar's broad rectangular shot with a
@@ -43,8 +43,8 @@ projectile's recorded facing and a shallow foreground presentation offset, so
 the projection remains visible when its source position overlaps a fighter.
 These are rendering-only fits: recorded projectile positions, timing, and hit
 results remain unchanged. Local checks are in
-`omf3k/build/omf3d_jag_projectile_tapered_hit_tick144.png` and
-`omf3k/build/omf3d_shadow_projection_contact_tick136.png`.
+`project/build/omf3d_jag_projectile_tapered_hit_tick144.png` and
+`project/build/omf3d_shadow_projection_contact_tick136.png`.
 
 Shadow Punch now visibly animates before its projection spawns. The original
 animation begins with an already-extended arm, so the 3D pass also keys torso
@@ -63,7 +63,7 @@ fighter's source position.
 ## Fixture construction
 
 The Jaguar fixture starts from the short local kick fixture described in the
-[Jaguar baseline](OMF3K_JAGUAR_BASELINE.md). It replaces the kick at tick 126
+[Jaguar baseline](OMF2115_JAGUAR_BASELINE.md). It replaces the kick at tick 126
 with `PUNCH|LEFT` (`0x71`) and inserts Jaguar `DOWNLEFT` (`0x60`) at tick 122
 and `LEFT` (`0x70`) at tick 124. These inputs perform `P41` while Jaguar faces
 right. The near variant sets Shadow x to 100 at tick 121.

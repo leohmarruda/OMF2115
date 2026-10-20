@@ -5,8 +5,8 @@ states) draw the same frames. This exports every Jaguar and Shadow animation's s
 needed, hashes each sprite's visible pixels (cropped to its content, so differing canvas
 offsets do not matter) and groups the animations that share sprites.
 
-    python omf3k/tools/sprite_duplicates.py                  # prints the groups, writes omf3k/build/duplicate-sprites.json
-    python omf3k/prototype/sprite_duplicates.py --write-groups   # also writes pose_sprite_groups.csv
+    python project/tools/sprite_duplicates.py                  # prints the groups, writes project/build/duplicate-sprites.json
+    python project/prototype/sprite_duplicates.py --write-groups   # also writes pose_sprite_groups.csv
 
 pose_sprite_groups.csv lists, per group, the player-triggered animations that draw identical sprites.
 generate_pose_catalog.py uses it so that an authored pose applies to every animation in its group.
@@ -142,7 +142,7 @@ def main():
     for g in found:
         print(HAR_DIRS[g["har"]], ", ".join(f"{m['animation']}{'' if m['match'] == 'identical' else '~'}"
                                             for m in g["members"]))
-    print(f"{len(found)} groups -> omf3k/build/duplicate-sprites.json (~ = only some sprites shared)")
+    print(f"{len(found)} groups -> project/build/duplicate-sprites.json (~ = only some sprites shared)")
     if "--write-groups" in sys.argv:
         write_groups(found)
 

@@ -1,34 +1,34 @@
-# OMF3K — side-on 3D fidelity spike
+# OMF2115 — side-on 3D fidelity spike
 
 ## Shadow visual references
 
-The approved [Shadow front, back, and side modeling references](../robots/shadow/canonical/README.md) are the visual source of truth for OMF3K's Shadow mesh. They define the featureless dark face opening with only green eyes, triangular shoulder/chest armor, ribbed limbs, and hand, elbow, and knee spikes. The [earlier concepts](../robots/shadow/front/README.md) remain available for comparison.
+The approved [Shadow front, back, and side modeling references](../robots/shadow/canonical/README.md) are the visual source of truth for OMF2115's Shadow mesh. They define the featureless dark face opening with only green eyes, triangular shoulder/chest armor, ribbed limbs, and hand, elbow, and knee spikes. The [earlier concepts](../robots/shadow/front/README.md) remain available for comparison.
 
 ## Jaguar visual references
 
-The approved [Jaguar front, back, and side modeling references](../robots/jaguar/canonical/README.md) are the visual source of truth for OMF3K's Jaguar mesh. They define the selected helmet, eyes, chest emblem, three-digit hands, armor proportions, materials, and two-panel rear head. The pose gallery below remains a reference for the original robot's movement and identity.
+The approved [Jaguar front, back, and side modeling references](../robots/jaguar/canonical/README.md) are the visual source of truth for OMF2115's Jaguar mesh. They define the selected helmet, eyes, chest emblem, three-digit hands, armor proportions, materials, and two-panel rear head. The pose gallery below remains a reference for the original robot's movement and identity.
 
-Run `powershell -ExecutionPolicy Bypass -File omf3k/scripts/export-jaguar-poses.ps1`
+Run `powershell -ExecutionPolicy Bypass -File project/scripts/export-jaguar-poses.ps1`
 from the repository root to extract 16 original Jaguar poses from the local
-game data. The picture list is written to `omf3k/docs/OMF2097/poses/jaguar/index.md`. These
+game data. The picture list is written to `project/docs/OMF2097/poses/jaguar/index.md`. These
 side-view sprites complement the approved three-view modeling reference.
 
 For the complete robot roster, run
-`powershell -ExecutionPolicy Bypass -File omf3k/scripts/export-robot-poses.ps1`.
-It writes a roster index to `omf3k/docs/OMF2097/poses/index.md` and a 16-pose picture
+`powershell -ExecutionPolicy Bypass -File project/scripts/export-robot-poses.ps1`.
+It writes a roster index to `project/docs/OMF2097/poses/index.md` and a 16-pose picture
 list for each of the 11 robots, including Nova. Attack frames are mapped from
 each robot's own animation file because their move IDs differ.
 
 For higher-resolution move captures, run
-`py -3 omf3k/tools/render_remastered_poses.py` after the original export.
+`py -3 project/tools/render_remastered_poses.py` after the original export.
 It matches every indexed frame to the local sibling OMF 2097 Remastered HD
-atlas and writes `omf3k/docs/Remastered/poses/index.md`, 16 HD poses for each of the
+atlas and writes `project/docs/Remastered/poses/index.md`, 16 HD poses for each of the
 11 original robots and four new Remastered robots, and
-`omf3k/docs/Remastered/poses/manifest.csv` with exact image provenance. The new
+`project/docs/Remastered/poses/manifest.csv` with exact image provenance. The new
 robots (Glacier, Tempest, Helix, and Spectre) come from Remastered's optional
 *New robots and arenas* mod and have no original-game counterparts. The original
 gallery stays available for comparison. The HD images are visual references;
-the approved OMF3K three-view sheets still define the robot designs.
+the approved OMF2115 three-view sheets still define the robot designs.
 
 This is a standalone, asset-free prototype beside OpenOMF. It now tests a
 side-on camera, one gameplay plane, discrete facing, a basic jump, punch,
@@ -79,7 +79,7 @@ Run `build/omf_debug_z7/omf3d_prototype.exe --self-test` for the headless
 combat check. It verifies a reachable win, facing after a side crossing,
 jump/landing, and back-to-block on either side. Run the same executable with
 `--capture` from the project root
-to save a hidden-window render at `omf3k/build/omf3d_sideon_capture.bmp`.
+to save a hidden-window render at `project/build/omf3d_sideon_capture.bmp`.
 
 ## Inspect Jaguar and Shadow
 
@@ -94,8 +94,8 @@ right-side view, **2** for front, **3** for back, **4** for punch, **5** for kic
 Press **8** for walk, **9** for jump, **H** for hit, and **M** for a signature
 move pose. For a repeatable visual review, run the executable with
 `--model-preview-capture` from the repository root. It saves
-`omf3k/build/omf3d_model_side.bmp`, `omf3k/build/omf3d_model_front.bmp`,
-`omf3k/build/omf3d_model_back.bmp`, and side-view `punch`, `kick`, `guard`,
+`project/build/omf3d_model_side.bmp`, `project/build/omf3d_model_front.bmp`,
+`project/build/omf3d_model_back.bmp`, and side-view `punch`, `kick`, `guard`,
 `crouch`, `walk`, `jump`, `hit`, and `special` files with the same prefix. These
 are renders of the editable blockout meshes,
 not copies of the approved concept images. Compare them with the
@@ -108,16 +108,16 @@ Crouching lowers the torso and bends the hips and knees while the feet stay
 planted, instead of shrinking the whole model.
 The signature poses use Jaguar animation 21 and Shadow animation 23 sprite
 keys. They were compared with exactly matched Remastered frames. The
-[source trace](../docs/OMF3K_SIGNATURE_MOVE_TRACE.md) now records their timing,
+[source trace](../docs/OMF2115_SIGNATURE_MOVE_TRACE.md) now records their timing,
 near/far health changes, and active projectile positions. The 3D replay
 displays a cyan shot and a purple Shadow duplicate as visual blockouts.
 
 To regenerate the embedded model data after editing either blockout, run
-`py -3 omf3k/tools/generate_model_meshes.py` and rebuild the target.
+`py -3 project/tools/generate_model_meshes.py` and rebuild the target.
 
 ## Live Jaguar–Shadow experiment
 
-From the repository root, run `powershell -ExecutionPolicy Bypass -File omf3k/scripts/run-live.ps1`
+From the repository root, run `powershell -ExecutionPolicy Bypass -File project/scripts/run-live.ps1`
 to choose Jaguar or Shadow and one of the ten playable pilots. The pilot's
 original power, agility, and endurance values are used by OpenOMF. The rival
 remains the canonical pilot of the other HAR: Shirro/Shadow or Crystal/Jaguar.
@@ -126,11 +126,11 @@ The live HUD echoes both pilot names so the chosen pilot remains visible during
 the match. The selection screen uses Up/Down for the robot, Left/Right for the
 pilot, Enter to start, and Escape to cancel.
 
-From the repository root, run `powershell -ExecutionPolicy Bypass -File omf3k/scripts/run-live-jaguar.ps1`.
+From the repository root, run `powershell -ExecutionPolicy Bypass -File project/scripts/run-live-jaguar.ps1`.
 This starts an OpenOMF Stadium match with Crystal/Jaguar against Shirro/Shadow
 and opens the 3D view. OpenOMF resolves movement, attacks, guarding, damage,
 and the AI; the 3D window displays each completed source tick.
-Run `powershell -ExecutionPolicy Bypass -File omf3k/scripts/run-live-shadow.ps1`
+Run `powershell -ExecutionPolicy Bypass -File project/scripts/run-live-shadow.ps1`
 to start the same match with Shirro/Shadow
 under your control against Crystal/Jaguar. Both launchers accept
 `-CaptureTick`, `-WarmupSeconds`, and `-Pilot`; the Jaguar launcher also accepts
@@ -203,11 +203,11 @@ OpenOMF stops accepting input after one second.
 For a hidden-window integration capture, run:
 
 ```text
-powershell -ExecutionPolicy Bypass -File omf3k/scripts/run-live-jaguar.ps1 -CaptureTick 160
+powershell -ExecutionPolicy Bypass -File project/scripts/run-live-jaguar.ps1 -CaptureTick 160
 ```
 
 The output is
-`omf3k/build/omf3d_source_replay_capture.bmp`. The captured tick can be newer than
+`project/build/omf3d_source_replay_capture.bmp`. The captured tick can be newer than
 160 because the viewer follows the most recent completed source tick.
 
 ## Source-driven replay view
@@ -219,7 +219,7 @@ it never runs the prototype's combat rules while the replay is playing. The
 robot blockouts are accepted for this prototype milestone; the stage remains
 provisional. Record a CSV using the optional
 `OMF3K_SOURCE_TRACE` build and `OMF3K_TRACE_PATH` described in the
-[Jaguar baseline](../docs/OMF3K_JAGUAR_BASELINE.md), then run from the
+[Jaguar baseline](../docs/OMF2115_JAGUAR_BASELINE.md), then run from the
 repository root:
 
 ```text
@@ -228,7 +228,7 @@ build/omf_debug_z7/omf3d_prototype.exe --source-replay build/omf_trace_z7/jag-co
 build/omf_debug_z7/omf3d_prototype.exe --source-replay build/omf_trace_z7/jag-corner-trace.csv --capture-tick 210
 ```
 
-The last command saves `omf3k/build/omf3d_source_replay_capture.bmp`. Space pauses,
+The last command saves `project/build/omf3d_source_replay_capture.bmp`. Space pauses,
 left/right steps one source tick while paused, R restarts, and Escape quits.
 Playback currently uses 28 ms per source tick, matching the speed-5 trace
 captures. Replay mode reads a recorded match and has no input control. Live
@@ -238,7 +238,7 @@ to source move frames and playtest event readability.
 
 Normal OpenOMF builds can opt into the `omf3d_prototype` CMake target via
 `BUILD_3D_PROTOTYPE=ON` (the default). A fresh CMake/Ninja build succeeds with
-MSVC `/Z7`; see the [source baseline](../docs/OMF3K_BASELINE.md) for the
+MSVC `/Z7`; see the [source baseline](../docs/OMF2115_BASELINE.md) for the
 Windows toolchain and dependency setup.
 
 ## What the source inspection showed
@@ -261,7 +261,7 @@ target remains a faithful 3D rendition of OMF 2097 with its pilots, HARs,
 side-on fighting, WAR/Ganymede story, and Tournament progression. Compare
 source match timing and moves with this spike before choosing the production
 engine. See the [original-game reference](../docs/OMF2097/OMF2097_REFERENCE.md) and
-[Jaguar data baseline](../docs/OMF3K_JAGUAR_BASELINE.md).
+[Jaguar data baseline](../docs/OMF2115_JAGUAR_BASELINE.md).
 
 ## Roadmap
 
@@ -277,8 +277,8 @@ has a brighter core and a directional trail. The Stadium blockout adds a
 roofed enclosure, stepped audience stands, stylized spectators, a central
 scoreboard, quieter floor markings, and a visible front apron. These are
 presentation changes: source replay positions and combat timing remain
-authoritative. A local frame is in `omf3k/build/mesh-match-ticks/stadium-crowd-blockout.bmp`.
-Captured examples are in `omf3k/build/mesh-match-ticks/` as
+authoritative. A local frame is in `project/build/mesh-match-ticks/stadium-crowd-blockout.bmp`.
+Captured examples are in `project/build/mesh-match-ticks/` as
 `shadow-projection-visual-pass.bmp` and `jag-projectile-visual-pass.bmp`.
 
 Current limits: Jaguar and Shadow are editable low-poly rigid-part blockouts,

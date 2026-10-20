@@ -1,13 +1,13 @@
-# OMF3K pose authoring workflow
+# OMF2115 pose authoring workflow
 
 The blockout renderer uses one shared joint rig. OpenOMF chooses each HAR's
 animation, sprite, and completed tick. A catalog entry only overrides a pose
 when a robot and source sprite need a distinct shape. Unauthored frames keep
 the shared rough pose; they are not counted as finished animation fits.
 
-The [move catalog](OMF3K_MOVE_CATALOG.md) lists every Jaguar and Shadow
+The [move catalog](OMF2115_MOVE_CATALOG.md) lists every Jaguar and Shadow
 animation with its input, authored status and a trace to check it against; regenerate it with
-`python omf3k/tools/generate_move_catalog.py` after editing `pose_catalog.csv` or
+`python project/tools/generate_move_catalog.py` after editing `pose_catalog.csv` or
 `move_names.csv`.
 
 ## 1. Inventory the local source data
@@ -16,10 +16,10 @@ From the repository root, with `aftool` built and the original game files in
 the local `OMF2097` directory:
 
 ```text
-python omf3k/tools/pose_inventory.py
+python project/tools/pose_inventory.py
 ```
 
-This writes `omf3k/build/pose-inventory.csv` with HAR ID/name, animation ID, sprite
+This writes `project/build/pose-inventory.csv` with HAR ID/name, animation ID, sprite
 count, input, and animation script for every local `FIGHTR*.AF` file. The
 current inventory contains 525 animations and 3,490 animation sprite keys
 across 11 HARs. These counts describe source content, not completed 3D poses.
@@ -28,11 +28,11 @@ To export one move's original frames and collect its observed timing from a
 source replay trace:
 
 ```text
-python omf3k/tools/pose_inventory.py --har 0 --animation 42 --export-sprites --trace build/omf_trace_z7/6p-trace.csv
+python project/tools/pose_inventory.py --har 0 --animation 42 --export-sprites --trace build/omf_trace_z7/6p-trace.csv
 ```
 
-The PNGs and their index go under `omf3k/build/pose-reference/jaguar/42/`. The trace
-produces `omf3k/build/pose-timelines.csv`, with one row per consecutive sprite hold.
+The PNGs and their index go under `project/build/pose-reference/jaguar/42/`. The trace
+produces `project/build/pose-timelines.csv`, with one row per consecutive sprite hold.
 Pass `--trace` more than once to combine recordings. The `build` outputs remain
 local and ignored; original artwork is not copied into the repository.
 
@@ -44,24 +44,24 @@ sprite's pose once, not once per animation. Run this check **for every new HAR, 
 before starting any move**:
 
 ```text
-python omf3k/tools/sprite_duplicates.py
+python project/tools/sprite_duplicates.py
 ```
 
 It exports the sprites of every Jaguar and Shadow animation if needed, hashes each sprite's
 visible pixels (so a different canvas offset does not hide a match) and prints the groups,
-also saved to `omf3k/build/duplicate-sprites.json`. `~` marks animations that share only some
+also saved to `project/build/duplicate-sprites.json`. `~` marks animations that share only some
 sprites. To cover a new HAR, add it to `HAR_DIRS` in `sprite_duplicates.py`.
 
-Then regenerate the [move catalog](OMF3K_MOVE_CATALOG.md), whose "Animations that
+Then regenerate the [move catalog](OMF2115_MOVE_CATALOG.md), whose "Animations that
 share sprites" section lists each group with its members' status and a note: *author once*,
 *free win* (a member is authored, so the others receive its poses), or *all authored*. The
-[move browser](OMF3K_MOVE_CATALOG.md#seeing-a-move) shows a "same sprites as" badge
+[move browser](OMF2115_MOVE_CATALOG.md#seeing-a-move) shows a "same sprites as" badge
 and a "hide duplicates" filter. Match animations by **sprite content**, not by number or
 input: do not assume that animations with similar inputs or neighbouring ids share frames,
 and do not assume that unrelated ones do not. Two animations that share sprites may still
 differ in timing and travel, which the replay trace gives, not the sprite.
 
-Authored poses are shared automatically. `python omf3k/tools/sprite_duplicates.py
+Authored poses are shared automatically. `python project/tools/sprite_duplicates.py
 --write-groups` writes `pose_sprite_groups.csv`, which lists for each group the **player-triggered**
 animations that draw identical sprites (reaction and state animations are left out, so a slide that
 reuses the idle frames cannot receive the idle pose or the reverse). `generate_pose_catalog.py`
@@ -77,7 +77,7 @@ the group, which is harmless.
 Fitting poses by typing numbers is slow, so use the editor:
 
 ```text
-python omf3k/tools/generate_pose_editor.py      # writes omf3k/build/pose-editor/index.html
+python project/tools/generate_pose_editor.py      # writes project/build/pose-editor/index.html
 ```
 
 Open that file in a browser. It lists one entry per group of animations that share sprites
@@ -107,14 +107,14 @@ extend past the sprite stay reachable. The *reference* menu switches the picture
 remastered HD frame of the same pose and a blend; the HD frames come from a sibling
 `OMF-2097-Remastered/public/hd` checkout, matched to the original sprites by fingerprint at 5x
 horizontal and 6x vertical scale (so joint positions stay in the original sprite's coordinates),
-and are saved under `omf3k/build/pose-editor/hd/`. They are local reference material: check the
+and are saved under `project/build/pose-editor/hd/`. They are local reference material: check the
 Remastered asset terms before copying any into a shareable artifact. Edits are kept in the
 browser between visits. Exports can be partial: only
 reviewed frames are written, and only the parts ticked on each. Then:
 
 ```text
-python omf3k/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv --dry-run
-python omf3k/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv
+python project/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv --dry-run
+python project/tools/merge_pose_rows.py ~/Downloads/pose-rows.csv
 ```
 
 The merge combines rows with the same key part by part: exported parts overwrite and parts
@@ -122,7 +122,7 @@ that were not exported keep their values, so exporting only the legs never erase
 arm (`--replace` swaps whole rows, which is how to remove a part). It validates them with
 `generate_pose_catalog.py`,
 regenerates `pose_catalog.c`, and restores the previous catalog (kept at
-`omf3k/build/pose_catalog.backup.csv`) if validation fails. An exported row is applied to every
+`project/build/pose_catalog.backup.csv`) if validation fails. An exported row is applied to every
 **player-triggered** animation in the sprite group, never to reaction or state animations, so
 a slide that reuses the idle frames cannot overwrite the idle pose. Rebuild
 `omf3d_prototype`, regenerate the move browser, and compare the render with the sprite.
@@ -162,8 +162,8 @@ chosen flags empty. The generator rejects duplicate keys, invalid flags,
 missing values, and nonfinite coordinates.
 
 ```text
-python omf3k/tools/generate_pose_catalog.py
-python omf3k/tools/generate_pose_catalog.py --check
+python project/tools/generate_pose_catalog.py
+python project/tools/generate_pose_catalog.py --check
 ```
 
 The generated [pose_catalog.c](../prototype/pose_catalog.c) is kept alongside the CSV so building the
@@ -177,14 +177,14 @@ Build `omf3d_prototype`, use `--model-preview-capture` for close views, then
 capture selected ticks from a source replay with `--source-replay ...
 --capture-tick N`. Compare the blockout with the exported source sprites and
 record the observed sequence in the robot baseline. Jaguar's standing punch
-is the first completed example in the [Jaguar baseline](OMF3K_JAGUAR_BASELINE.md).
+is the first completed example in the [Jaguar baseline](OMF2115_JAGUAR_BASELINE.md).
 
 Use the higher-resolution robot and character sprites in
 [OMF 2097 Remastered](https://github.com/Jared-woodruff/OMF-2097-Remastered)
 for visual pose and detail comparisons when they are available. Match frames
 by robot and move before comparing;
 do not assume its frame numbering or timing matches OpenOMF. The approved
-three-view sheets still define the OMF3K mesh, and the source trace still
+three-view sheets still define the OMF2115 mesh, and the source trace still
 defines combat timing. Record which remastered image informed a pose or detail
 and check its asset terms before copying it into a shareable artifact. If the
 matching Remastered frame is unavailable, label the pose fit provisional.
@@ -192,14 +192,14 @@ The Remastered `public/hd/index.json` maps original indexed sprite fingerprints
 to HD atlas pages. Match exported OpenOMF sprites exactly with:
 
 ```text
-python omf3k/tools/match_remastered_frames.py ../OMF-2097-Remastered/public/hd omf3k/build/pose-reference/shadow/42 --extract-dir omf3k/build/hd-shadow-kick
+python project/tools/match_remastered_frames.py ../OMF-2097-Remastered/public/hd project/build/pose-reference/shadow/42 --extract-dir project/build/hd-shadow-kick
 ```
 
 The sibling `OMF-2097-Remastered` project is the local HD source. Its atlas
 index and the Jaguar and Shadow atlas pages used in this pass were checked
 against the earlier reference checkout and are byte-identical. Extracted
-crops belong in the ignored `omf3k/build/` folder. The HD artwork has different
-colors and armor styling; use its pose and joint visibility, while the approved OMF3K three-view sheets
+crops belong in the ignored `project/build/` folder. The HD artwork has different
+colors and armor styling; use its pose and joint visibility, while the approved OMF2115 three-view sheets
 continue to define the robot design.
 
 Sprite order and holds can be extracted automatically. The 2D sprites do not

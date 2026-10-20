@@ -205,7 +205,7 @@ def make_model():
         box(f"foot_toe_{side:+d}", (s*.43, .075, -.32), (.36, .15, .46), LIGHT)
 
 
-def write_gltf(filename="jaguar-blockout.gltf", generator="OMF3K Jaguar blockout"):
+def write_gltf(filename="jaguar-blockout.gltf", generator="OMF2115 Jaguar blockout"):
     blob = bytearray()
     gltf = {"asset": {"version": "2.0", "generator": generator},
             "scene": 0, "scenes": [{"nodes": list(range(len(PARTS)))}],

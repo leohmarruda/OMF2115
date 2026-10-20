@@ -1,13 +1,13 @@
 """Merge pose rows exported from the pose editor into pose_catalog.csv.
 
-    python omf3k/tools/merge_pose_rows.py path/to/pose-rows.csv [--dry-run] [--replace]
+    python project/tools/merge_pose_rows.py path/to/pose-rows.csv [--dry-run] [--replace]
 
 An exported row may carry only some parts of a pose (its flags). For a sprite already in the
 catalog the parts are merged: the exported parts overwrite, the other existing parts (and their
 values) are kept, so a partial export never erases an authored arm or leg. Pass --replace to
 replace whole rows instead, which is also how to remove a part. New sprites are added. The
 merged rows are validated by generate_pose_catalog.py, which also regenerates pose_catalog.c.
-A backup of the previous catalog is kept as omf3k/build/pose_catalog.backup.csv.
+A backup of the previous catalog is kept as project/build/pose_catalog.backup.csv.
 """
 from __future__ import annotations
 

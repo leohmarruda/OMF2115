@@ -109,7 +109,7 @@ def make_model():
 
 if __name__ == "__main__":
     make_model()
-    mesh.write_gltf("shadow-blockout.gltf", "OMF3K Shadow blockout")
+    mesh.write_gltf("shadow-blockout.gltf", "OMF2115 Shadow blockout")
     for view in ("front", "back", "side"):
         mesh.render(view, HERE / f"shadow-{view}.png")
     mesh.render("side", HERE / "shadow-fight-distance.png", 960, 600, 55, 1.68)

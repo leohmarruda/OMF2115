@@ -1,7 +1,7 @@
 param(
     [ValidateSet('All','Jaguar','Shadow','Thorn','Pyros','Electra','Katana','Shredder','Flail','Gargoyle','Chronos','Nova')]
     [string]$Robot = 'All',
-    [string]$OutputDirectory = 'omf3k/docs/OMF2097/poses'
+    [string]$OutputDirectory = 'project/docs/OMF2097/poses'
 )
 
 $ErrorActionPreference = 'Stop'

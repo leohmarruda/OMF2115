@@ -132,10 +132,10 @@ def render(rows: list[dict[str, str]]) -> str:
 def warn_shared_sprites(rows: list[dict[str, str]], path: Path) -> None:
     """Warn about animations that draw the same sprites but have different explicit poses.
 
-    Reads the groups written by sprite_duplicates.py (omf3k/build/duplicate-sprites.json).
+    Reads the groups written by sprite_duplicates.py (project/build/duplicate-sprites.json).
     """
     if not path.is_file():
-        print("Shared sprites: not checked; run python omf3k/tools/sprite_duplicates.py first")
+        print("Shared sprites: not checked; run python project/tools/sprite_duplicates.py first")
         return
     authored = {(int(r["har"]), int(r["animation"]), int(r["sprite"])): r for r in rows}
     for group in json.loads(path.read_text(encoding="utf-8")):

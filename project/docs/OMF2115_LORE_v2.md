@@ -1,7 +1,7 @@
-# OMF3K — Ensemble story treatment
+# OMF2115 — Ensemble story treatment
 
 **Setting:** WAR's 2097 Ganymede tournament
-**Status:** Original story proposal for a 3D adaptation, revised against the [original-game lore](OMF2097/OMF2097_LORE.md) and [manual findings](OMF2097/MANUAL_FINDINGS.md). New motives, characters, the deep-link, and branching outcomes below are OMF3K inventions, not original-game canon.
+**Status:** Original story proposal for a 3D adaptation, revised against the [original-game lore](OMF2097/OMF2097_LORE.md) and [manual findings](OMF2097/MANUAL_FINDINGS.md). New motives, characters, the deep-link, and branching outcomes below are OMF2115 inventions, not original-game canon.
 
 ## 0. Canon boundary and route rule
 
@@ -22,7 +22,7 @@ with eligible adults of any gender. All characters are presumed bisexual;
 their default partners do not limit player choice. Romantic routes are offered
 only to consenting adults.
 
-Angel's age is unknown in the original manual. OMF3K establishes her as an
+Angel's age is unknown in the original manual. OMF2115 establishes her as an
 adult, age 28, so she can take part in adult relationships. Steffan remains 17
 as in the manual. He can form close friendships and rivalries, but has no
 romance or sexual route during the 2097 story.
@@ -49,7 +49,7 @@ Fights leave no wounds. Repeated sessions bring tremors, exhaustion, phantom pai
 
 ## 3. Evangelion DNA, translated
 
-| Inspiration | OMF3K equivalent |
+| Inspiration | OMF2115 equivalent |
 | --- | --- |
 | A secretive organization with an agenda behind the "defense" mission | WAR and Nova behind the tournament |
 | Pilots chosen by fit; the body as an instrument | Tier-2 enrollment by **Coupling Index** (CI) |
@@ -162,7 +162,7 @@ background while allowing different loyalties and endings.
 
 ### Raven, 26 — The Contractor *(brutal mercenary)*
 - **Public mask:** Kreissack's bodyguard, silent and feared.
-- **Want:** the Ganymede post for his own plans and a way to remove Kreissack, as the manual suggests. In OMF3K he also seeks a buyout of his contract and enough money never to be owned again.
+- **Want:** the Ganymede post for his own plans and a way to remove Kreissack, as the manual suggests. In OMF2115 he also seeks a buyout of his contract and enough money never to be owned again.
 - **Wound:** years of working for people who treated him as a tool.
 - **Secret:** on his default path, he helped cover up the Devroe shuttle operation; records and witnesses can expose it without his cooperation.
 - **Symptoms and concealment:** the deep-link gives him sensation he had lost, so he hides the *craving*, not the pain. He tapes his knife hand to hide a tremor.
@@ -183,7 +183,7 @@ background while allowing different loyalties and endings.
 - **Endings:** he becomes the leak that makes the rupture public; he is caught by Halvorsen-Tse; he stays with Milano against both employers' wishes.
 
 ### Angel — The Ghost *(hacker)*
-- **Age:** 28 in OMF3K; the original manual leaves her age unknown. She is an eligible adult romance option, with her trust and privacy treated as choices rather than rewards for discovering her past.
+- **Age:** 28 in OMF2115; the original manual leaves her age unknown. She is an eligible adult romance option, with her trust and privacy treated as choices rather than rewards for discovering her past.
 - **Public mask:** the finalist with no public history.
 - **Want:** to restore the erased records of people harmed in earlier link trials, including someone she loves who is in long-term care.
 - **Wound:** she saw the first altered telemetry and was erased from the system for it.
@@ -334,7 +334,7 @@ defeated, refuses, disappears, or changes sides, another route remains open.
 
 ## 9. Structure
 
-**Format.** Qualifier league of three rounds (15 matches), top four to the semifinals, two to the final, and the winner faces Kreissack in the **Representative's Duel**. Tier-2 offers go out after Round 1. This bracket is an OMF3K proposal, not a rule specified by the original manual.
+**Format.** Qualifier league of three rounds (15 matches), top four to the semifinals, two to the final, and the winner faces Kreissack in the **Representative's Duel**. Tier-2 offers go out after Round 1. This bracket is an OMF2115 proposal, not a rule specified by the original manual.
 
 | Act | Focus | Key beats |
 | --- | --- | --- |

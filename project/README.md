@@ -1,6 +1,6 @@
-# OMF3K project workspace
+# OMF2115 project workspace
 
-This folder contains OMF3K-specific work inside the OpenOMF checkout. The upstream engine remains in the repository's `src/`, `resources/`, `testing/`, and other existing folders.
+This folder contains OMF2115-specific work inside the OpenOMF checkout. The upstream engine remains in the repository's `src/`, `resources/`, `testing/`, and other existing folders.
 
 | Folder | Purpose |
 | --- | --- |
@@ -13,6 +13,6 @@ This folder contains OMF3K-specific work inside the OpenOMF checkout. The upstre
 | [scripts](scripts) | PowerShell launchers for the viewer, the live fight and the Meshy preview |
 | build | Everything the tools generate: reference sprites, the pose editor and move browser, captures, reports. Created on use and ignored by Git |
 
-The approved [Jaguar](robots/jaguar/canonical/README.md) and [Shadow](robots/shadow/canonical/README.md) front, back, and right-side images are the current visual source of truth. Editable [Jaguar](robots/jaguar/blockout/README.md) and [Shadow](robots/shadow/blockout/README.md) blockouts now run in the prototype. The [recorded match review](docs/OMF3K_MODEL_MATCH_REVIEW.md) tracks their current reach, timing, facing, and readability gaps.
+The approved [Jaguar](robots/jaguar/canonical/README.md) and [Shadow](robots/shadow/canonical/README.md) front, back, and right-side images are the current visual source of truth. Editable [Jaguar](robots/jaguar/blockout/README.md) and [Shadow](robots/shadow/blockout/README.md) blockouts now run in the prototype. The [recorded match review](docs/OMF2115_MODEL_MATCH_REVIEW.md) tracks their current reach, timing, facing, and readability gaps.
 
-Local original-game files in `../OMF2097/`, generated sprite references in `docs/OMF2097/poses/` and `docs/Remastered/poses/`, generated files in `build/` here, OpenOMF's own CMake builds in `../build/`, and local dependencies in `../vcpkg_installed/` are not part of distributable OMF3K art. The two generated pose folders are ignored by Git.
+Local original-game files in `../OMF2097/`, generated sprite references in `docs/OMF2097/poses/` and `docs/Remastered/poses/`, generated files in `build/` here, OpenOMF's own CMake builds in `../build/`, and local dependencies in `../vcpkg_installed/` are not part of distributable OMF2115 art. The two generated pose folders are ignored by Git.

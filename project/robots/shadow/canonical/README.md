@@ -1,6 +1,6 @@
 # Shadow canonical 3D modeling reference
 
-These are the approved front, back, and right-side visual references for OMF3K's Shadow 3D model. Use this three-view set for proportions, silhouette, armor layout, material, and color placement.
+These are the approved front, back, and right-side visual references for OMF2115's Shadow 3D model. Use this three-view set for proportions, silhouette, armor layout, material, and color placement.
 
 The [editable Shadow silhouette blockout](../blockout/README.md) is the first
 model candidate made from this reference set. It remains open to visual review.

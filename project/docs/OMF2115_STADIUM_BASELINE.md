@@ -3,7 +3,7 @@
 These measurements extend the Jaguar–Shadow source baseline with Stadium wall
 response and one complete source-driven match. They come from OpenOMF's
 end-of-dynamic-tick trace, not from prototype collision rules. CSVs and images
-remain in the ignored local `build/` and `omf3k/build/` directories; the original `.REC` fixtures
+remain in the ignored local `build/` and `project/build/` directories; the original `.REC` fixtures
 were not changed.
 
 ## Stadium wall response

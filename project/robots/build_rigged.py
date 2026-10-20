@@ -128,10 +128,10 @@ def export(har, parts, output):
         parents[f"hip_{suffix}"] = "pelvis"
         parents[f"knee_{suffix}"] = f"hip_{suffix}"
         parents[f"ankle_{suffix}"] = f"knee_{suffix}"
-    gltf = {"asset": {"version": "2.0", "generator": "OMF3K rigid-joint rig"},
+    gltf = {"asset": {"version": "2.0", "generator": "OMF2115 rigid-joint rig"},
             "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [], "meshes": [],
             "materials": [], "animations": [], "buffers": [], "bufferViews": [], "accessors": [],
-            "extras": {"design": "approved OMF3K three-view references",
+            "extras": {"design": "approved OMF2115 three-view references",
                        "motion": "original OMF sprite poses and matched Remastered frames",
                        "runtime": "source ticks drive prototype poses; these clips are editor previews"}}
     node_ids = {}

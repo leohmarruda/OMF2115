@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 if ($CaptureTick -lt -1) { throw 'CaptureTick must be zero or greater.' }
 if ($WarmupSeconds -lt 0 -or $WarmupSeconds -gt 8) { throw 'WarmupSeconds must be between zero and eight.' }
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-New-Item -ItemType Directory -Force (Join-Path $projectRoot 'omf3k\build') | Out-Null   # where the viewer writes its captures
+New-Item -ItemType Directory -Force (Join-Path $projectRoot 'project\build') | Out-Null   # where the viewer writes its captures
 $sourceDir = Join-Path $projectRoot 'build\omf_trace_z7'
 $sourceExe = Join-Path $sourceDir 'openomf.exe'
 $viewerExe = Join-Path $projectRoot 'build\omf_debug_z7\omf3d_prototype.exe'

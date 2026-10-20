@@ -1,4 +1,4 @@
-# OMF3K — roadmap
+# OMF2115 — roadmap
 
 Status: revised after comparing the prototype with the [original game
 reference](OMF2097/OMF2097_REFERENCE.md). This is a milestone plan, not a date
@@ -6,17 +6,17 @@ commitment.
 
 ## Target
 
-Make **OMF3K** a faithful 3D rendition of One Must Fall 2097. Fighters and arenas
+Make **OMF2115** a faithful 3D rendition of One Must Fall 2097. Fighters and arenas
 gain 3D models, animation, lighting, and camera work while the match remains
 readable as a side-view fighter. Preserve the game's pilot-plus-HAR selection,
 directional punch/kick controls, specials, blocking, stun, combos, hazards,
 WAR's contest for Ganymede, pilot rivalries and endings, and Tournament mode.
-The `omf3k/prototype` spike now uses a side-on plane and the accepted Jaguar
+The `project/prototype` spike now uses a side-on plane and the accepted Jaguar
 and Shadow silhouette blockouts. Its standalone combat values and arena remain
 technical placeholders rather than the combat or story template.
 
 The story pass should expand OMF's own neural-link, WAR, Kreissack, and Nova
-themes. The [story treatment](OMF3K_LORE_v2.md) develops the
+themes. The [story treatment](OMF2115_LORE_v2.md) develops the
 government conspiracy, relationships, and physical cost of an experimental
 link while keeping the setting, cast, and central tournament.
 The [game specification](OMF2097_3D_GAME_SPEC.md) defines the target modes,
@@ -34,7 +34,7 @@ guard, and one HAR's specials. A production 3D engine may handle models and
 animation, but gameplay parity is the measure of success. Do not commit to a
 full engine migration until that study and a 3D match spike are complete.
 
-**Fight engine decision (2026-10-15):** OMF3K does not get a new combat engine.
+**Fight engine decision (2026-10-15):** OMF2115 does not get a new combat engine.
 Every fight runs on OpenOMF's reverse-engineered rules with the original AF/BK
 data; the 3D view only renders the per-tick state it publishes. The prototype's
 built-in combat loop is now a `--sandbox`-only placeholder and is no longer the
@@ -79,7 +79,7 @@ stack; it would then need the same state exporter and REC parity checks.
    central board. The live launcher now opens an in-game selection screen that
    connects ten playable pilots to Jaguar or Shadow, using their OpenOMF stats.
    Human-test the full Stadium match while OpenOMF owns combat timing/results.
-4. Compare that playable match against the [recorded model match review](OMF3K_MODEL_MATCH_REVIEW.md)
+4. Compare that playable match against the [recorded model match review](OMF2115_MODEL_MATCH_REVIEW.md)
    before expanding the roster or adding story scenes.
 
 ## Scope boundaries
@@ -103,7 +103,7 @@ release license. Maintain an asset provenance list throughout production.
 ## References
 
 - [Original game reference](OMF2097/OMF2097_REFERENCE.md)
-- [Story treatment](OMF3K_LORE_v2.md)
+- [Story treatment](OMF2115_LORE_v2.md)
 - [Game specification](OMF2097_3D_GAME_SPEC.md)
 - [Development plan](OMF2097_DEVPLAN.md)
 - [OpenOMF repository](https://github.com/omf2097/openomf)

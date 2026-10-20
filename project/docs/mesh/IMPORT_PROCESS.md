@@ -3,7 +3,7 @@
 How the Robot Mascot (Jaguar) and Rocket Jester (Shadow) were turned into rigged
 prototype models, written so the next mesh goes faster. Everything is driven by
 [`generate_meshy_meshes.py`](../../tools/generate_meshy_meshes.py); the result is
-`omf3k/prototype/meshy_meshes.h`, selected at runtime with `OMF3K_MESHY=1`.
+`project/prototype/meshy_meshes.h`, selected at runtime with `OMF3K_MESHY=1`.
 
 ## What the prototype expects
 
@@ -63,13 +63,13 @@ joints and the posed joints, in the (y, z) plane only. So an imported mesh must 
 10. **Wire it in `main.c`:** include the arrays and add the HAR to the selection in
     `robot_loaded_model`. `OMF3K_MESHY=1` switches all Meshy meshes on.
 11. **Check the moves for the new HAR** (the mesh is only half of it: a move shows only if
-    its poses are authored, see `omf3k/docs/POSE_AUTHORING.md`):
+    its poses are authored, see `project/docs/POSE_AUTHORING.md`):
     ```
-    python omf3k/tools/pose_inventory.py            # animations, inputs, sprite counts
-    python omf3k/tools/sprite_duplicates.py --write-groups   # which animations share sprites; poses are shared
-    python omf3k/tools/generate_move_catalog.py     # status, traces, free wins
-    python omf3k/tools/generate_move_browser.py     # original sprite | blockout | Meshy
-    python omf3k/tools/generate_pose_editor.py      # fit poses to the sprites, then merge_pose_rows.py
+    python project/tools/pose_inventory.py            # animations, inputs, sprite counts
+    python project/tools/sprite_duplicates.py --write-groups   # which animations share sprites; poses are shared
+    python project/tools/generate_move_catalog.py     # status, traces, free wins
+    python project/tools/generate_move_browser.py     # original sprite | blockout | Meshy
+    python project/tools/generate_pose_editor.py      # fit poses to the sprites, then merge_pose_rows.py
     ```
     Add the HAR to `HAR_DIRS` in `sprite_duplicates.py` and `HARS` in
     `generate_move_catalog.py`. **Run the duplicate check before authoring or judging any
@@ -79,13 +79,13 @@ joints and the posed joints, in the (y, z) plane only. So an imported mesh must 
 ## Run and check
 
 ```
-py -3 omf3k/tools/generate_meshy_meshes.py [--debug <dir>]   # regenerate the header
-omf3k\prototype\run-meshy.ps1 [-Capture]        # regenerate, build, model preview
-omf3k\prototype\run-meshy-fight-jaguar.ps1      # live fight as Jaguar
-omf3k\prototype\run-meshy-fight-shadow.ps1      # live fight as Shadow
+py -3 project/tools/generate_meshy_meshes.py [--debug <dir>]   # regenerate the header
+project\prototype\run-meshy.ps1 [-Capture]        # regenerate, build, model preview
+project\prototype\run-meshy-fight-jaguar.ps1      # live fight as Jaguar
+project\prototype\run-meshy-fight-shadow.ps1      # live fight as Shadow
 ```
 
-`-Capture` writes `omf3k/build/omf3d_model_{side,front,back,punch,kick,guard,...}.bmp`.
+`-Capture` writes `project/build/omf3d_model_{side,front,back,punch,kick,guard,...}.bmp`.
 Check idle, punch, kick and guard from front and side, **and the live fight** (the
 preview and the fight are different windows).
 
